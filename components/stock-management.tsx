@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/hooks/use-toast"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
-import { getCurrentUser, logActivity } from "@/lib/auth"
+import { getCurrentUser, logActivity, getSessionToken } from "@/lib/auth"
 import { cn } from "@/lib/utils"
 import { Pencil, Trash2, Search, History, Package, Layers } from "lucide-react"
 
@@ -66,6 +66,20 @@ export function StockManagement() {
   const [brandFilter, setBrandFilter] = useState<string>("all")
   const [skuCheckResult, setSkuCheckResult] = useState<{ exists: boolean; product?: StockProduct | null } | null>(null)
   const [showSkuTools, setShowSkuTools] = useState(false)
+
+  // Helper interno para llamadas a /api/stock con token
+  const fetchStock = async (body: any) => {
+    const token = getSessionToken()
+    return fetch("/api/stock", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      credentials: "include",
+      body: JSON.stringify(body),
+    })
+  }
 
   useEffect(() => {
     fetchData()
@@ -132,12 +146,7 @@ export function StockManagement() {
       // Obtener conteos de cambios por SKU desde API (service role)
       let countMap = new Map<string, number>()
       try {
-        const res = await fetch("/api/stock", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ action: "getChangeCounts" }),
-        })
+        const res = await fetchStock({ action: "getChangeCounts" })
         const json = await res.json()
         if (res.ok && json?.ok && json?.counts) {
           countMap = new Map<string, number>(Object.entries(json.counts))
@@ -238,14 +247,9 @@ export function StockManagement() {
       }
 
       // Crear producto y asegurar marca vía API con service role
-      const resp = await fetch("/api/stock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          action: "createProduct",
-          payload: { sku, name, brand: brandValue, quantity: qtyNum },
-        }),
+      const resp = await fetchStock({
+        action: "createProduct",
+        payload: { sku, name, brand: brandValue, quantity: qtyNum },
       })
       const json = await resp.json()
       if (!resp.ok || !json?.ok) {
@@ -272,11 +276,9 @@ export function StockManagement() {
       await logActivity("CREATE_STOCK_PRODUCT", "stock_products", newId, null, { sku, name, brand: brandValue, quantity: qtyNum }, "Creación de producto en Stock")
 
       setLastCreatedSku(sku)
-      const verifyRes = await fetch("/api/stock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ action: "verifyProduct", payload: { sku } }),
+      const verifyRes = await fetchStock({
+        action: "verifyProduct",
+        payload: { sku },
       })
       const verifyJson = await verifyRes.json()
       if (verifyRes.ok && verifyJson?.ok && verifyJson?.exists) {
@@ -388,14 +390,9 @@ export function StockManagement() {
         toast({ title: "Eliminado", description: "Producto eliminado" })
         return
       }
-      const resp = await fetch("/api/stock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          action: "deleteProduct",
-          payload: { product_id: product.id },
-        }),
+      const resp = await fetchStock({
+        action: "deleteProduct",
+        payload: { product_id: product.id },
       })
       const json = await resp.json()
       if (!resp.ok || !json?.ok) {

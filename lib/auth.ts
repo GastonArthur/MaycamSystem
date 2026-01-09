@@ -810,6 +810,21 @@ const generateSecureSessionToken = (): string => {
   return Math.random().toString(36).substring(2) + Date.now().toString(36) + Math.random().toString(36).substring(2)
 }
 
+// Helper para obtener el token de sesión (localStorage o cookie) y usarlo en fetch
+export const getSessionToken = (): string | null => {
+  // 1. Prioridad: localStorage (donde se guarda al hacer login)
+  if (typeof localStorage !== "undefined") {
+    const token = localStorage.getItem("session_token")
+    if (token) return token
+  }
+  // 2. Fallback: leer cookie manualmente
+  if (typeof document !== "undefined") {
+    const match = document.cookie.match(/(?:^|;)\s*session_token=([^;]*)/)
+    return match ? match[1] : null
+  }
+  return null
+}
+
 // Funciones para persistir datos offline
 export const getOfflineData = () => ({
   users: OFFLINE_USERS,

@@ -18,25 +18,32 @@ type Action =
 export async function POST(req: NextRequest) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    if (!supabaseUrl || !serviceKey) {
-      return NextResponse.json({ error: "Supabase no configurado" }, { status: 500 })
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json({ error: "Supabase no está configurado" }, { status: 500 })
     }
+    const supabase = createClient(supabaseUrl, supabaseKey)
 
-    const sessionToken = req.cookies.get("session_token")?.value
+    // 1. Extraer token de sesión (Authorization header o cookie)
+    const authHeader = req.headers.get("Authorization")
+    const tokenFromHeader = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : null
+    const tokenFromCookie = req.cookies.get("session_token")?.value
+    const sessionToken = tokenFromHeader || tokenFromCookie
+
     if (!sessionToken) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    const supabase = createClient(supabaseUrl, serviceKey)
-
+    // 2. Validar sesión
     const { data: session, error: sessionError } = await supabase
       .from("user_sessions")
-      .select(`
+      .select(
+        `
         user_id,
         expires_at,
         users!inner ( id, email, name, is_active )
-      `)
+      `
+      )
       .eq("session_token", sessionToken)
       .maybeSingle()
 
@@ -47,9 +54,11 @@ export async function POST(req: NextRequest) {
     if (expiresAt.getTime() < Date.now()) {
       return NextResponse.json({ error: "Sesión expirada" }, { status: 401 })
     }
+    const user = session.users
+    const userId = user.id
 
     const body = await req.json()
-    const action: Action = body?.action
+    const { action, payload }: { action: Action; payload: any } = body
 
     if (!action) {
       return NextResponse.json({ error: "Acción requerida" }, { status: 400 })

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { getSessionToken } from "@/lib/auth"
 import {
   ChevronLeft,
   ChevronRight,
@@ -79,17 +80,26 @@ export function StockList() {
   const qtyRef = useRef<HTMLInputElement>(null)
   const editQtyRef = useRef<HTMLInputElement>(null)
   const editDateRef = useRef<HTMLInputElement>(null)
+
+  // Helper interno para llamadas a /api/stock con token
+  const fetchStock = async (body: any) => {
+    const token = getSessionToken()
+    return fetch("/api/stock", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      credentials: "include",
+      body: JSON.stringify(body),
+    })
+  }
   async function deleteBrandByName(b: string) {
     if (readOnly) return
     const ok = window.confirm(`¿Eliminar marca "${b}"?`)
     if (!ok) return
     try {
-      const resp = await fetch("/api/stock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ action: "deleteBrand", payload: { name: b } }),
-      })
+      const resp = await fetchStock({ action: "deleteBrand", payload: { name: b } })
       const json = await resp.json()
       if (!resp.ok || !json?.ok) {
         throw new Error(json?.error || "Error eliminando marca")
@@ -115,12 +125,8 @@ export function StockList() {
   async function loadData() {
     try {
       setLoading(true)
-      const resp = await fetch("/api/stock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ action: "listAll" }),
-      })
+      const token = getSessionToken()
+      const resp = await fetchStock({ action: "listAll" })
       const json = await resp.json()
       if (!resp.ok || !json?.ok) {
         throw new Error(json?.error || "Error cargando Stock")
@@ -195,14 +201,9 @@ export function StockList() {
         return
       }
 
-      const resp = await fetch("/api/stock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          action: "createProduct",
-          payload: { sku, name, brand: brandValue, quantity: qtyNum },
-        }),
+      const resp = await fetchStock({
+        action: "createProduct",
+        payload: { sku, name, brand: brandValue, quantity: qtyNum },
       })
       const json = await resp.json()
       if (!resp.ok || !json?.ok) {
@@ -247,14 +248,9 @@ export function StockList() {
         toast({ title: "Cantidad inválida", description: "Ingrese un número válido", variant: "destructive" })
         return
       }
-      const resp = await fetch("/api/stock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          action: "updateQuantity",
-          payload: { product_id: item.id, sku: item.sku, old_quantity: item.quantity, new_quantity: newQty },
-        }),
+      const resp = await fetchStock({
+        action: "updateQuantity",
+        payload: { product_id: item.id, sku: item.sku, old_quantity: item.quantity, new_quantity: newQty },
       })
       const json = await resp.json()
       if (!resp.ok || !json?.ok) {
@@ -286,14 +282,9 @@ export function StockList() {
         toast({ title: "Fecha inválida", description: "Ingrese una fecha válida", variant: "destructive" })
         return
       }
-      const resp = await fetch("/api/stock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          action: "updateCreatedAt",
-          payload: { product_id: item.id, created_at: newDateISO },
-        }),
+      const resp = await fetchStock({
+        action: "updateCreatedAt",
+        payload: { product_id: item.id, created_at: newDateISO },
       })
       const json = await resp.json()
       if (!resp.ok || !json?.ok) {
@@ -322,14 +313,9 @@ export function StockList() {
     const ok = window.confirm(`¿Eliminar producto ${item.sku}?`)
     if (!ok) return
     try {
-      const resp = await fetch("/api/stock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          action: "deleteProduct",
-          payload: { product_id: item.id },
-        }),
+      const resp = await fetchStock({
+        action: "deleteProduct",
+        payload: { product_id: item.id },
       })
       const json = await resp.json()
       if (!resp.ok || !json?.ok) {
@@ -401,21 +387,16 @@ export function StockList() {
         setEditItem(null)
         return
       }
-      const resp = await fetch("/api/stock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          action: "updateProduct",
-          payload: {
-            product_id: editItem.id,
-            sku,
-            name,
-            brand: brandValue,
-            quantity: qtyNum,
-            created_at: createdLocal,
-          },
-        }),
+      const resp = await fetchStock({
+        action: "updateProduct",
+        payload: {
+          product_id: editItem.id,
+          sku,
+          name,
+          brand: brandValue,
+          quantity: qtyNum,
+          created_at: createdLocal,
+        },
       })
       const json = await resp.json()
       if (!resp.ok || !json?.ok) {
