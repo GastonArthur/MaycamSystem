@@ -1295,6 +1295,46 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
     })
   }
 
+  const exportToPDF = (order: WholesaleOrder) => {
+    // Obtener el nombre del cliente
+    const clientName = clients.find((c) => c.id === order.client_id)?.name || "Cliente desconocido"
+    
+    // Crear el contenido del PDF
+    const content = [
+      `Pedido #${order.id} - Cliente: ${clientName}`,
+      "",
+      "Productos:",
+      "==========",
+      ""
+    ]
+    
+    // Agregar cada producto (solo SKU y Nombre)
+    order.items?.forEach((item) => {
+      content.push(`SKU: ${item.sku} - ${item.description}`)
+    })
+    
+    // Crear el documento
+    const docContent = content.join("\n")
+    
+    // Crear un blob con el contenido
+    const blob = new Blob([docContent], { type: "text/plain" })
+    const url = URL.createObjectURL(blob)
+    
+    // Crear un enlace de descarga
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `Pedido_${order.id}_${clientName.replace(/\s+/g, "_")}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    
+    toast({
+      title: "Exportación completada",
+      description: `Se ha exportado el pedido #${order.id} de ${clientName}`,
+    })
+  }
+
   const exportWholesalePrices = () => {
     if (!hasPermission("EXPORT")) {
       toast({
@@ -2632,6 +2672,15 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                                         title="Editar pedido"
                                       >
                                         <Edit className="w-3 h-3" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => exportToPDF(order)}
+                                        title="Exportar pedido"
+                                        className="text-blue-600 hover:text-blue-700"
+                                      >
+                                        <FileText className="w-3 h-3" />
                                       </Button>
                                       <Button
                                         variant="ghost"
