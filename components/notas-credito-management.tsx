@@ -282,6 +282,7 @@ export function NotasCreditoManagement() {
       <div className="bg-gradient-to-r from-pink-50 to-rose-50 rounded-lg p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-2">
           <FileText className="h-5 w-5 text-pink-600" />
+          <h2 className="text-2xl font-semibold text-pink-800">Notas de Crédito</h2>
         </div>
         <p className="text-sm text-muted-foreground">
           Control completo de notas de crédito de proveedores con múltiples productos
@@ -462,98 +463,91 @@ export function NotasCreditoManagement() {
       </div>
 
       {/* Tabla */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Notas de Crédito ({filteredNotes.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Número</TableHead>
-                <TableHead>Proveedor</TableHead>
-                <TableHead className="text-center">Items</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead>Fecha Emisión</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredNotes.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    No se encontraron notas de crédito.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredNotes.map((note) => (
-                  <TableRow key={note.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <Plus className="h-3 w-3 text-muted-foreground cursor-pointer" />
-                        {note.number}
-                      </div>
-                    </TableCell>
-                    <TableCell>{note.supplier}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="secondary" className="rounded-full px-2">
-                        {note.items_count}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-bold">{formatCurrency(note.total)}</TableCell>
-                    <TableCell>{new Date(note.date).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Badge
-                        className={
-                          note.status === "disponible"
-                            ? "bg-emerald-500 hover:bg-emerald-600"
-                            : "bg-slate-500 hover:bg-slate-600"
-                        }
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Número</TableHead>
+            <TableHead>Proveedor</TableHead>
+            <TableHead className="text-center">Items</TableHead>
+            <TableHead className="text-right">Total</TableHead>
+            <TableHead>Fecha Emisión</TableHead>
+            <TableHead>Estado</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredNotes.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                No se encontraron notas de crédito.
+              </TableCell>
+            </TableRow>
+          ) : (
+            filteredNotes.map((note) => (
+              <TableRow key={note.id}>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <Plus className="h-3 w-3 text-muted-foreground cursor-pointer" />
+                    {note.number}
+                  </div>
+                </TableCell>
+                <TableCell>{note.supplier}</TableCell>
+                <TableCell className="text-center">
+                  <Badge variant="secondary" className="rounded-full px-2">
+                    {note.items_count}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right font-bold">{formatCurrency(note.total)}</TableCell>
+                <TableCell>{new Date(note.date).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  <Badge
+                    className={
+                      note.status === "disponible"
+                        ? "bg-emerald-500 hover:bg-emerald-600"
+                        : "bg-slate-500 hover:bg-slate-600"
+                    }
+                  >
+                    {note.status === "disponible" ? "Disponible" : "Utilizada"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    {note.status === "disponible" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-emerald-600 border-emerald-200 hover:bg-emerald-50 bg-transparent"
+                        onClick={() => handleUseNote(note.id)}
                       >
-                        {note.status === "disponible" ? "Disponible" : "Utilizada"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        {note.status === "disponible" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8 text-emerald-600 border-emerald-200 hover:bg-emerald-50 bg-transparent"
-                            onClick={() => handleUseNote(note.id)}
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Usar
-                          </Button>
-                        )}
-                        {note.status !== "utilizada" && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0"
-                            onClick={() => handleEditNote(note)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => handleDeleteNote(note.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                        <Check className="h-4 w-4 mr-1" />
+                        Usar
+                      </Button>
+                    )}
+                    {note.status !== "utilizada" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleEditNote(note)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => handleDeleteNote(note.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
     </div>
   )
 }
