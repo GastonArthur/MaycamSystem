@@ -282,7 +282,6 @@ export function NotasCreditoManagement() {
       <div className="bg-gradient-to-r from-pink-50 to-rose-50 rounded-lg p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-2">
           <FileText className="h-5 w-5 text-pink-600" />
-          <h2 className="text-2xl font-semibold text-pink-800">Notas de Crédito</h2>
         </div>
         <p className="text-sm text-muted-foreground">
           Control completo de notas de crédito de proveedores con múltiples productos
