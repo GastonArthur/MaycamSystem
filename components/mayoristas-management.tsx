@@ -1296,43 +1296,202 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
   }
 
   const exportToPDF = (order: WholesaleOrder) => {
-    // Obtener el nombre del cliente
     const clientName = clients.find((c) => c.id === order.client_id)?.name || "Cliente desconocido"
-    
-    // Crear el contenido del PDF
-    const content = [
-      `Pedido #${order.id} - Cliente: ${clientName}`,
-      "",
-      "Productos:",
-      "==========",
-      ""
-    ]
-    
-    // Agregar cada producto (solo SKU y Nombre)
-    order.items?.forEach((item) => {
-      content.push(`SKU: ${item.sku} - ${item.description}`)
-    })
-    
-    // Crear el documento
-    const docContent = content.join("\n")
-    
-    // Crear un blob con el contenido
-    const blob = new Blob([docContent], { type: "text/plain" })
-    const url = URL.createObjectURL(blob)
-    
-    // Crear un enlace de descarga
+
+    const sanitizeFilePart = (value: string) =>
+      value
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .replace(/\s+/g, "_")
+        .replace(/[^A-Za-z0-9_-]/g, "")
+
+    const toPdfText = (value: string) => value.replace(/\s+/g, " ").trim()
+
+    const escapePdfString = (value: string) =>
+      toPdfText(value).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)")
+
+    const wrapText = (text: string, maxChars: number) => {
+      const clean = toPdfText(text)
+      if (!clean) return [""]
+      const words = clean.split(/\s+/g)
+      const lines: string[] = []
+      let current = ""
+      for (const word of words) {
+        const next = current ? `${current} ${word}` : word
+        if (next.length <= maxChars) {
+          current = next
+          continue
+        }
+        if (current) lines.push(current)
+        if (word.length > maxChars) {
+          let start = 0
+          while (start < word.length) {
+            lines.push(word.slice(start, start + maxChars))
+            start += maxChars
+          }
+          current = ""
+        } else {
+          current = word
+        }
+      }
+      if (current) lines.push(current)
+      return lines.length ? lines : [""]
+    }
+
+    const encodeLatin1 = (input: string) => {
+      const bytes = new Uint8Array(input.length)
+      for (let i = 0; i < input.length; i++) {
+        const code = input.charCodeAt(i)
+        bytes[i] = code <= 0xff ? code : 63
+      }
+      return bytes
+    }
+
+    const byteLengthLatin1 = (input: string) => encodeLatin1(input).length
+
+    const pageWidth = 595
+    const pageHeight = 842
+    const marginLeft = 40
+    const marginTop = 800
+    const marginBottom = 60
+    const lineHeight = 14
+
+    const skuX = marginLeft
+    const nameX = 140
+    const qtyX = 530
+
+    const pages: string[] = []
+    const addPage = (content: string) => {
+      pages.push(content)
+    }
+
+    const pushText = (parts: string[], x: number, y: number, font: "F1" | "F2", size: number) =>
+      parts.map((t) => `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${escapePdfString(t)}) Tj ET\n`).join("")
+
+    let currentPageContent = ""
+    let y = marginTop
+
+    const ensureSpace = (linesNeeded: number) => {
+      if (y - linesNeeded * lineHeight < marginBottom) {
+        addPage(currentPageContent)
+        currentPageContent = ""
+        y = marginTop
+      }
+    }
+
+    currentPageContent += pushText([`Pedido #${order.id}`], marginLeft, y, "F2", 16)
+    y -= 22
+    currentPageContent += pushText([`Cliente: ${clientName}`], marginLeft, y, "F1", 11)
+    y -= 16
+    const fecha = order.order_date ? order.order_date.split("T")[0] : ""
+    currentPageContent += pushText([`Fecha: ${fecha}`], marginLeft, y, "F1", 11)
+    y -= 26
+
+    ensureSpace(3)
+    currentPageContent += pushText(["SKU"], skuX, y, "F2", 10)
+    currentPageContent += pushText(["Nombre"], nameX, y, "F2", 10)
+    currentPageContent += pushText(["Cant."], qtyX, y, "F2", 10)
+    y -= 18
+
+    const items = order.items || []
+    for (const item of items) {
+      const nameLines = wrapText(item.description || "", 48)
+      ensureSpace(nameLines.length)
+
+      currentPageContent += pushText([item.sku || ""], skuX, y, "F1", 9)
+      currentPageContent += pushText([`${item.quantity ?? 0}`], qtyX, y, "F1", 9)
+      currentPageContent += pushText([nameLines[0] || ""], nameX, y, "F1", 9)
+      y -= lineHeight
+
+      for (let i = 1; i < nameLines.length; i++) {
+        currentPageContent += pushText([nameLines[i]], nameX, y, "F1", 9)
+        y -= lineHeight
+      }
+    }
+
+    addPage(currentPageContent)
+
+    const buildPdf = (pageContents: string[]) => {
+      type PdfObj = { id: number; body: string }
+      const objects: PdfObj[] = []
+      const addObject = (body: string) => {
+        const id = objects.length + 1
+        objects.push({ id, body })
+        return id
+      }
+
+      const fontRegularId = addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+      const fontBoldId = addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>")
+
+      const pageObjectIds: number[] = []
+      const contentObjectIds: number[] = []
+
+      const pagesIdPlaceholder = addObject("<< >>")
+
+      for (let i = 0; i < pageContents.length; i++) {
+        const pageNo = i + 1
+        const totalPages = pageContents.length
+        const footer = pushText([`Página ${pageNo} de ${totalPages}`], marginLeft, 34, "F1", 9)
+        const fullContent = `${pageContents[i]}${footer}`
+        const contentBytesLength = byteLengthLatin1(fullContent)
+        const contentId = addObject(`<< /Length ${contentBytesLength} >>\nstream\n${fullContent}endstream`)
+        contentObjectIds.push(contentId)
+
+        const pageId = addObject(
+          `<< /Type /Page /Parent ${pagesIdPlaceholder} 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 ${fontRegularId} 0 R /F2 ${fontBoldId} 0 R >> >> /Contents ${contentId} 0 R >>`,
+        )
+        pageObjectIds.push(pageId)
+      }
+
+      const kids = pageObjectIds.map((id) => `${id} 0 R`).join(" ")
+      objects[pagesIdPlaceholder - 1].body = `<< /Type /Pages /Kids [${kids}] /Count ${pageObjectIds.length} >>`
+
+      const catalogId = addObject(`<< /Type /Catalog /Pages ${pagesIdPlaceholder} 0 R >>`)
+
+      const header = "%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3\n"
+      const chunks: string[] = [header]
+      const offsets: number[] = [0]
+
+      let byteOffset = byteLengthLatin1(header)
+
+      for (const obj of objects) {
+        offsets[obj.id] = byteOffset
+        const chunk = `${obj.id} 0 obj\n${obj.body}\nendobj\n`
+        chunks.push(chunk)
+        byteOffset += byteLengthLatin1(chunk)
+      }
+
+      const xrefStart = byteOffset
+      const xrefLines: string[] = []
+      xrefLines.push("xref\n")
+      xrefLines.push(`0 ${objects.length + 1}\n`)
+      xrefLines.push("0000000000 65535 f \n")
+      for (let i = 1; i <= objects.length; i++) {
+        const off = offsets[i] || 0
+        xrefLines.push(`${String(off).padStart(10, "0")} 00000 n \n`)
+      }
+
+      const trailer =
+        `trailer\n<< /Size ${objects.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`
+      chunks.push(xrefLines.join(""))
+      chunks.push(trailer)
+
+      return new Blob(chunks.map((c) => encodeLatin1(c)), { type: "application/pdf" })
+    }
+
+    const pdfBlob = buildPdf(pages)
+    const url = URL.createObjectURL(pdfBlob)
+
     const a = document.createElement("a")
     a.href = url
-    a.download = `Pedido_${order.id}_${clientName.replace(/\s+/g, "_")}.txt`
+    a.download = `Pedido_${order.id}_${sanitizeFilePart(clientName)}.pdf`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-    
-    toast({
-      title: "Exportación completada",
-      description: `Se ha exportado el pedido #${order.id} de ${clientName}`,
-    })
+
+    toast({ title: "Exportación completada", description: `Se exportó el pedido #${order.id}` })
   }
 
   const exportWholesalePrices = () => {
