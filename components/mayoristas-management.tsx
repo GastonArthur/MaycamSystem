@@ -1366,8 +1366,22 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
       pages.push(content)
     }
 
-    const pushText = (parts: string[], x: number, y: number, font: "F1" | "F2", size: number) =>
-      parts.map((t) => `BT /${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${escapePdfString(t)}) Tj ET\n`).join("")
+    const pushText = (
+      parts: string[],
+      x: number,
+      y: number,
+      font: "F1" | "F2",
+      size: number,
+      color?: string,
+    ) => {
+      const colorCmd = color ? `${color} rg\n` : ""
+      return parts
+        .map((t) => `BT ${colorCmd}/${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${escapePdfString(t)}) Tj ET\n`)
+        .join("")
+    }
+
+    const drawRect = (x: number, y: number, width: number, height: number, color: string) =>
+      `${color} rg ${x} ${y} ${width} ${height} re f\n`
 
     let currentPageContent = ""
     let y = marginTop
@@ -1380,24 +1394,30 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
       }
     }
 
-    currentPageContent += pushText([`Pedido #${order.id}`], marginLeft, y, "F2", 16)
-    y -= 22
+    // Header
+    currentPageContent += drawRect(0, 780, pageWidth, 50, "0.48 0.25 0.93") // Purple background
+    currentPageContent += pushText([`Pedido #${order.id}`], marginLeft, 800, "F2", 20, "1 1 1") // White text
+
+    // Client Info
+    y = 760
     currentPageContent += pushText([`Cliente: ${clientName}`], marginLeft, y, "F1", 11)
     y -= 16
     const fecha = order.order_date ? order.order_date.split("T")[0] : ""
     currentPageContent += pushText([`Fecha: ${fecha}`], marginLeft, y, "F1", 11)
-    y -= 26
+    y -= 30
 
+    // Table Header
     ensureSpace(3)
+    currentPageContent += drawRect(marginLeft, y - 4, pageWidth - marginLeft * 2, 20, "0.93 0.93 0.93") // Light gray background
     currentPageContent += pushText(["SKU"], skuX, y, "F2", 10)
     currentPageContent += pushText(["Nombre"], nameX, y, "F2", 10)
     currentPageContent += pushText(["Cant."], qtyX, y, "F2", 10)
-    y -= 18
+    y -= 22
 
-    const items = order.items || []
+    const items = (order.items || []).filter((item) => item.sku !== "ENVIO")
     for (const item of items) {
       const nameLines = wrapText(item.description || "", 48)
-      ensureSpace(nameLines.length)
+      ensureSpace(nameLines.length + 1) // +1 for padding
 
       currentPageContent += pushText([item.sku || ""], skuX, y, "F1", 9)
       currentPageContent += pushText([`${item.quantity ?? 0}`], qtyX, y, "F1", 9)
@@ -1408,6 +1428,7 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
         currentPageContent += pushText([nameLines[i]], nameX, y, "F1", 9)
         y -= lineHeight
       }
+      y -= 4 // Padding between rows
     }
 
     addPage(currentPageContent)

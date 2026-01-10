@@ -4449,7 +4449,7 @@ ${csvRows
                     <CardHeader className="py-3">
                       <CardTitle className="flex items-center gap-2">
                         <ShoppingCart className="w-5 h-5" />
-                        Mayoristas1
+                        Mayoristas
                       </CardTitle>
                     </CardHeader>
                   </Card>
