@@ -1352,19 +1352,28 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
 
     const pageWidth = 595
     const pageHeight = 842
-    const marginLeft = 40
-    const marginTop = 800
-    const marginBottom = 60
-    const lineHeight = 14
+    const marginLeft = 50
+    const marginRight = 50
+    const marginTop = 50
+    const marginBottom = 50
+    const lineHeight = 16
 
-    const skuX = marginLeft
-    const nameX = 140
-    const qtyX = 530
+    const colSkuX = marginLeft
+    const colNameX = 120
+    const colQtyX = pageWidth - marginRight - 60
+    const colPriceX = pageWidth - marginRight - 120
+    const colTotalX = pageWidth - marginRight - 60
 
     const pages: string[] = []
     const addPage = (content: string) => {
       pages.push(content)
     }
+
+    const drawLine = (x1: number, y1: number, x2: number, y2: number, width: number = 0.5) =>
+      `${width} w ${x1} ${y1} m ${x2} ${y2} l S\n`
+
+    const drawRect = (x: number, y: number, width: number, height: number, color: string) =>
+      `${color} rg ${x} ${y} ${width} ${height} re f\n`
 
     const pushText = (
       parts: string[],
@@ -1373,63 +1382,97 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
       font: "F1" | "F2",
       size: number,
       color?: string,
+      align: "left" | "center" | "right" = "left",
     ) => {
       const colorCmd = color ? `${color} rg\n` : ""
-      return parts
-        .map((t) => `BT ${colorCmd}/${font} ${size} Tf 1 0 0 1 ${x} ${y} Tm (${escapePdfString(t)}) Tj ET\n`)
-        .join("")
+      let result = ""
+      parts.forEach((text, index) => {
+        const textX = align === "center" ? x - (text.length * size * 0.35) : align === "right" ? x - (text.length * size * 0.7) : x
+        result += `BT ${colorCmd}/${font} ${size} Tf 1 0 0 1 ${textX} ${y - index * size * 1.2} Tm (${escapePdfString(text)}) Tj ET\n`
+      })
+      return result
     }
 
-    const drawRect = (x: number, y: number, width: number, height: number, color: string) =>
-      `${color} rg ${x} ${y} ${width} ${height} re f\n`
-
     let currentPageContent = ""
-    let y = marginTop
+    let y = pageHeight - marginTop
 
     const ensureSpace = (linesNeeded: number) => {
       if (y - linesNeeded * lineHeight < marginBottom) {
         addPage(currentPageContent)
         currentPageContent = ""
-        y = marginTop
+        y = pageHeight - marginTop
       }
     }
 
-    // Header
-    currentPageContent += drawRect(0, 780, pageWidth, 50, "0.48 0.25 0.93") // Purple background
-    currentPageContent += pushText([`Pedido #${order.id}`], marginLeft, 800, "F2", 20, "1 1 1") // White text
+    // Header con diseño profesional
+    currentPageContent += drawRect(0, pageHeight - 100, pageWidth, 100, "0.15 0.24 0.35") // Azul oscuro profesional
+    currentPageContent += pushText(["PEDIDO"], pageWidth / 2, pageHeight - 70, "F2", 28, "1 1 1", "center")
+    currentPageContent += pushText([`#${order.id}`], pageWidth / 2, pageHeight - 45, "F1", 16, "1 1 1", "center")
 
-    // Client Info
-    y = 760
-    currentPageContent += pushText([`Cliente: ${clientName}`], marginLeft, y, "F1", 11)
-    y -= 16
-    const fecha = order.order_date ? order.order_date.split("T")[0] : ""
-    currentPageContent += pushText([`Fecha: ${fecha}`], marginLeft, y, "F1", 11)
-    y -= 30
+    // Información de la empresa (simulado)
+    y = pageHeight - 120
+    currentPageContent += pushText(["MAYCAM SYSTEM"], marginLeft, y, "F2", 14, "0.15 0.24 0.35")
+    currentPageContent += pushText(["Mayorista de Productos"], marginLeft, y - 18, "F1", 10, "0.3 0.3 0.3")
+    currentPageContent += pushText(["Tel: (011) 1234-5678"], marginLeft, y - 32, "F1", 10, "0.3 0.3 0.3")
+    currentPageContent += pushText(["Email: info@maycam.com"], marginLeft, y - 46, "F1", 10, "0.3 0.3 0.3")
 
-    // Table Header
-    ensureSpace(3)
-    currentPageContent += drawRect(marginLeft, y - 4, pageWidth - marginLeft * 2, 20, "0.93 0.93 0.93") // Light gray background
-    currentPageContent += pushText(["SKU"], skuX, y, "F2", 10)
-    currentPageContent += pushText(["Nombre"], nameX, y, "F2", 10)
-    currentPageContent += pushText(["Cant."], qtyX, y, "F2", 10)
-    y -= 22
+    // Línea divisoria
+    currentPageContent += drawLine(marginLeft, y - 60, pageWidth - marginRight, y - 60, 1)
 
+    // Información del cliente
+    y = y - 80
+    currentPageContent += pushText(["CLIENTE"], marginLeft, y, "F2", 12, "0.15 0.24 0.35")
+    currentPageContent += pushText([clientName], marginLeft, y - 20, "F1", 11, "0 0 0")
+    
+    // Fecha del pedido
+    const fecha = order.order_date ? new Date(order.order_date).toLocaleDateString('es-AR') : ""
+    currentPageContent += pushText(["FECHA"], pageWidth - 200, y, "F2", 12, "0.15 0.24 0.35")
+    currentPageContent += pushText([fecha], pageWidth - 200, y - 20, "F1", 11, "0 0 0")
+
+    // Línea divisoria
+    currentPageContent += drawLine(marginLeft, y - 40, pageWidth - marginRight, y - 40, 0.5)
+
+    // Tabla de productos
+    y = y - 70
+    
+    // Encabezado de tabla con estilo
+    currentPageContent += drawRect(marginLeft, y - 10, pageWidth - marginLeft - marginRight, 30, "0.95 0.95 0.95")
+    currentPageContent += pushText(["SKU"], colSkuX, y, "F2", 11, "0.15 0.24 0.35")
+    currentPageContent += pushText(["PRODUCTO"], colNameX, y, "F2", 11, "0.15 0.24 0.35")
+    currentPageContent += pushText(["CANT."], colQtyX, y, "F2", 11, "0.15 0.24 0.35", "right")
+
+    y = y - 30
+
+    // Filtrar productos ENVIO
     const items = (order.items || []).filter((item) => item.sku !== "ENVIO")
+    
     for (const item of items) {
-      const nameLines = wrapText(item.description || "", 48)
-      ensureSpace(nameLines.length + 1) // +1 for padding
+      const nameLines = wrapText(item.description || "", 60)
+      ensureSpace(nameLines.length + 2)
 
-      currentPageContent += pushText([item.sku || ""], skuX, y, "F1", 9)
-      currentPageContent += pushText([`${item.quantity ?? 0}`], qtyX, y, "F1", 9)
-      currentPageContent += pushText([nameLines[0] || ""], nameX, y, "F1", 9)
-      y -= lineHeight
-
-      for (let i = 1; i < nameLines.length; i++) {
-        currentPageContent += pushText([nameLines[i]], nameX, y, "F1", 9)
-        y -= lineHeight
+      // Fila alternada con color suave
+      if (items.indexOf(item) % 2 === 0) {
+        currentPageContent += drawRect(marginLeft, y - 5, pageWidth - marginLeft - marginRight, nameLines.length * lineHeight + 10, "0.98 0.98 0.98")
       }
-      y -= 4 // Padding between rows
+
+      currentPageContent += pushText([item.sku || ""], colSkuX, y, "F1", 10, "0 0 0")
+      currentPageContent += pushText([`${item.quantity ?? 0}`], colQtyX, y, "F1", 10, "0 0 0", "right")
+      
+      // Producto con manejo de múltiples líneas
+      for (let i = 0; i < nameLines.length; i++) {
+        currentPageContent += pushText([nameLines[i]], colNameX, y - i * 14, "F1", 10, "0 0 0")
+      }
+      
+      y -= Math.max(nameLines.length * lineHeight, lineHeight) + 8
+      
+      // Línea separadora entre productos
+      if (items.indexOf(item) < items.length - 1) {
+        currentPageContent += drawLine(marginLeft, y + 4, pageWidth - marginRight, y + 4, 0.3)
+      }
     }
+
+    // Línea final de la tabla
+    currentPageContent += drawLine(marginLeft, y, pageWidth - marginRight, y, 1)
 
     addPage(currentPageContent)
 
