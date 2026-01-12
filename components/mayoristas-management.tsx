@@ -1296,7 +1296,9 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
   }
 
   const exportToPDF = (order: WholesaleOrder) => {
-    const clientName = clients.find((c) => c.id === order.client_id)?.name || "Cliente desconocido"
+    const client = clients.find((c) => c.id === order.client_id)
+    const clientName = client?.name || "Cliente desconocido"
+    const clientCuit = client?.cuit || ""
 
     const sanitizeFilePart = (value: string) =>
       value
@@ -1306,401 +1308,159 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
         .replace(/\s+/g, "_")
         .replace(/[^A-Za-z0-9_-]/g, "")
 
-    const toPdfText = (value: string) => value.replace(/\s+/g, " ").trim()
+    const fileName = `${sanitizeFilePart(clientName)}_pedido_${order.id}.pdf`
 
-    const escapePdfString = (value: string) =>
-      toPdfText(value).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)")
-
-    const wrapText = (text: string, maxChars: number) => {
-      const clean = toPdfText(text)
-      if (!clean) return [""]
-      const words = clean.split(/\s+/g)
-      const lines: string[] = []
-      let current = ""
-      for (const word of words) {
-        const next = current ? `${current} ${word}` : word
-        if (next.length <= maxChars) {
-          current = next
-          continue
-        }
-        if (current) lines.push(current)
-        if (word.length > maxChars) {
-          let start = 0
-          while (start < word.length) {
-            lines.push(word.slice(start, start + maxChars))
-            start += maxChars
-          }
-          current = ""
-        } else {
-          current = word
-        }
-      }
-      if (current) lines.push(current)
-      return lines.length ? lines : [""]
-    }
-
-    const encodeLatin1 = (input: string) => {
-      const bytes = new Uint8Array(input.length)
-      for (let i = 0; i < input.length; i++) {
-        const code = input.charCodeAt(i)
-        bytes[i] = code <= 0xff ? code : 63
-      }
-      return bytes
-    }
-
-    const byteLengthLatin1 = (input: string) => encodeLatin1(input).length
-
-    const pageWidth = 595
-    const pageHeight = 842
-    const marginLeft = 20
-    const marginRight = 20
-    const marginTop = 40
-    const marginBottom = 40
+    const pageWidth = 595.28
+    const pageHeight = 841.89
+    const marginLeft = 40
+    const marginRight = 40
     const contentWidth = pageWidth - marginLeft - marginRight
 
-    const pages: string[] = []
-    const addPage = (content: string) => {
-      pages.push(content)
+    let pdf = ""
+    let currentY = 0
+
+    const push = (str: string) => {
+      pdf += str + "\n"
     }
 
-    const drawLine = (x1: number, y1: number, x2: number, y2: number, width: number = 0.5) =>
-      `${width} w ${x1} ${y1} m ${x2} ${y2} l S\n`
-
-    const drawRect = (x: number, y: number, width: number, height: number, color: string, fill: boolean = true) =>
-      fill ? `${color} rg ${x} ${y} ${width} ${height} re f\n` : `${color} RG 1 w ${x} ${y} ${width} ${height} re S\n`
-
-    const pushText = (
-      parts: string[],
-      x: number,
-      y: number,
-      font: "F1" | "F2", // F1 Regular, F2 Bold
-      size: number,
-      color: string = "0 0 0",
-      align: "left" | "center" | "right" = "left",
-    ) => {
-      const colorCmd = `${color} rg\n`
+    const latin1 = (str: string) => {
       let result = ""
-      parts.forEach((text, index) => {
-        // Simple character width estimation (approximate for Helvetica)
-        const charWidth = size * 0.55
-        const textWidth = text.length * charWidth
-        
-        let textX = x
-        if (align === "center") textX = x - textWidth / 2
-        if (align === "right") textX = x - textWidth
-
-        result += `BT ${colorCmd}/${font} ${size} Tf 1 0 0 1 ${textX} ${y - index * size * 1.2} Tm (${escapePdfString(text)}) Tj ET\n`
-      })
+      for (let i = 0; i < str.length; i++) {
+        const charCode = str.charCodeAt(i)
+        if (charCode > 255) {
+          result += String.fromCharCode(94) // Replace non-Latin-1 with '^'
+        } else {
+          result += str.charAt(i)
+        }
+      }
       return result
     }
 
-    let currentPageContent = ""
-    let y = pageHeight - marginTop
+    const pushText = (
+      text: string,
+      x: number,
+      y: number,
+      options: {
+        size?: number
+        bold?: boolean
+        align?: "left" | "center" | "right"
+        color?: string
+      } = {}
+    ) => {
+      const { size = 10, bold = false, align = "left", color = "0 g" } = options
+      let textX = x
+      if (align === "center") {
+        // This is a rough approximation. For accurate centering, we'd need font metrics.
+        textX = x - text.length * size * 0.25
+      } else if (align === "right") {
+        textX = x - text.length * size * 0.5
+      }
 
-    const ensureSpace = (linesNeeded: number) => {
-      // If we are too close to bottom (leaving space for footer)
-      if (y - linesNeeded * 12 < 150) { 
-        addPage(currentPageContent)
-        currentPageContent = ""
-        y = pageHeight - marginTop
-        // Re-draw basic header or just continue? Usually invoices repeat header or just "Continued..."
-        // For simplicity, we just start new page at top margin
+      push("BT")
+      push(`/F${bold ? 2 : 1} ${size} Tf`)
+      push(`${textX} ${pageHeight - y} Td`)
+      if (color !== "0 g") {
+        push(color)
+      }
+      push(`(${latin1(text)}) Tj`)
+      push("ET")
+    }
+
+    const startPage = () => {
+      currentY = marginLeft
+      pushText("Maycam Games", marginLeft, currentY, { size: 16, bold: true })
+      currentY += 30
+
+      pushText(`Pedido N°: ${order.id}`, marginLeft, currentY)
+      pushText(
+        `Fecha: ${new Date(order.created_at).toLocaleDateString("es-AR")}`,
+        contentWidth - 100,
+        currentY
+      )
+      currentY += 20
+
+      pushText(`Apellido y Nombre: ${clientName}`, marginLeft, currentY)
+      currentY += 15
+      pushText(`CUIT / DNI: ${clientCuit}`, marginLeft, currentY)
+      currentY += 30
+    }
+
+    const ensureSpace = (spaceNeeded: number) => {
+      if (currentY + spaceNeeded > pageHeight - marginRight) {
+        startPage() // This will reset currentY
       }
     }
 
-    // --- DRAWING LOGIC START ---
+    startPage()
 
-    // 1. "ORIGINAL" Header
-    currentPageContent += pushText(["ORIGINAL"], pageWidth / 2, pageHeight - 30, "F2", 12, "0 0 0", "center")
-    
-    // Draw Main Box Outline
-    const headerBoxTop = pageHeight - 35
-    const headerBoxHeight = 120
-    currentPageContent += drawRect(marginLeft, headerBoxTop - headerBoxHeight, contentWidth, headerBoxHeight, "0 0 0", false)
-
-    // Vertical Divider for Company/Invoice
-    currentPageContent += drawLine(pageWidth / 2, headerBoxTop, pageWidth / 2, headerBoxTop - headerBoxHeight)
-
-    // Letter Box "A"
-    const letterBoxSize = 40
-    const letterBoxX = (pageWidth / 2) - (letterBoxSize / 2)
-    const letterBoxY = headerBoxTop - 50
-    
-    // Clear background for letter box to hide the vertical line
-    currentPageContent += drawRect(letterBoxX, letterBoxY, letterBoxSize, letterBoxSize + 10, "1 1 1", true)
-    // Draw Letter Box Border
-    currentPageContent += drawRect(letterBoxX, letterBoxY, letterBoxSize, letterBoxSize, "0 0 0", false)
-    
-    // "A" and "COD. 01"
-    currentPageContent += pushText(["A"], pageWidth / 2, letterBoxY + 10, "F2", 24, "0 0 0", "center")
-    currentPageContent += pushText(["COD. 01"], pageWidth / 2, letterBoxY - 8, "F2", 6, "0 0 0", "center")
-
-    // Left Side: Company Info
-    let leftY = headerBoxTop - 25
-    currentPageContent += pushText(["MAYCAM SYSTEM"], marginLeft + 10, leftY, "F2", 14, "0 0 0")
-    leftY -= 25
-    currentPageContent += pushText(["Razón Social: MAYCAM SYSTEM"], marginLeft + 10, leftY, "F1", 9)
-    leftY -= 15
-    currentPageContent += pushText(["Domicilio Comercial: Dirección de la empresa"], marginLeft + 10, leftY, "F1", 9)
-    leftY -= 15
-    currentPageContent += pushText(["Condición frente al IVA: Responsable Inscripto"], marginLeft + 10, leftY, "F2", 9)
-
-    // Right Side: Invoice Info
-    let rightY = headerBoxTop - 25
-    const rightColX = pageWidth / 2 + 20
-    currentPageContent += pushText(["FACTURA"], rightColX, rightY, "F2", 18, "0 0 0")
-    rightY -= 20
-    currentPageContent += pushText([`Punto de Venta: 00001   Comp. Nro: ${String(order.id).padStart(8, '0')}`], rightColX, rightY, "F2", 9)
-    rightY -= 15
-    const orderDate = order.order_date ? new Date(order.order_date).toLocaleDateString('es-AR') : new Date().toLocaleDateString('es-AR')
-    currentPageContent += pushText([`Fecha de Emisión: ${orderDate}`], rightColX, rightY, "F2", 9)
-    rightY -= 20
-    currentPageContent += pushText(["CUIT: 30-00000000-0"], rightColX, rightY, "F2", 9)
-    rightY -= 12
-    currentPageContent += pushText(["Ingresos Brutos: 000-000000"], rightColX, rightY, "F1", 9)
-    rightY -= 12
-    currentPageContent += pushText(["Fecha de Inicio de Actividades: 01/01/2020"], rightColX, rightY, "F1", 9)
-
-    // 2. Client Box
-    const clientBoxTop = headerBoxTop - headerBoxHeight - 5
-    const clientBoxHeight = 50
-    currentPageContent += drawRect(marginLeft, clientBoxTop - clientBoxHeight, contentWidth, clientBoxHeight, "0 0 0", false)
-
-    let clientY = clientBoxTop - 15
-    const clientData = clients.find((c) => c.id === order.client_id)
-    
-    currentPageContent += pushText([`CUIT: ${clientData?.cuit || ""}`], marginLeft + 10, clientY, "F2", 9)
-    currentPageContent += pushText([`Apellido y Nombre / Razón Social: ${clientName}`], marginLeft + 150, clientY, "F2", 9)
-    
-    clientY -= 20
-    currentPageContent += pushText(["Condición frente al IVA: Responsable Inscripto"], marginLeft + 10, clientY, "F2", 9)
-    currentPageContent += pushText([`Domicilio Comercial: ${clientData?.address || ""} ${clientData?.city || ""}`], marginLeft + 250, clientY, "F1", 9)
-
-    // 3. Table Header
-    const tableTop = clientBoxTop - clientBoxHeight - 10
-    const tableHeaderHeight = 20
-    
-    // Draw Header Background
-    currentPageContent += drawRect(marginLeft, tableTop - tableHeaderHeight, contentWidth, tableHeaderHeight, "0.85 0.85 0.85", true)
-    // Draw Header Border
-    currentPageContent += drawRect(marginLeft, tableTop - tableHeaderHeight, contentWidth, tableHeaderHeight, "0 0 0", false)
-
-    // Columns Configuration
+    // Table Header
     const cols = [
-      { name: "Código", x: marginLeft + 5, width: 40 },
-      { name: "Producto / Servicio", x: marginLeft + 45, width: 200 },
-      { name: "Cantidad", x: marginLeft + 245, width: 50, align: "right" },
-      { name: "U. medida", x: marginLeft + 295, width: 50 },
-      { name: "Precio Unit.", x: marginLeft + 345, width: 60, align: "right" },
-      { name: "% Bonif", x: marginLeft + 405, width: 40, align: "right" },
-      { name: "Subtotal", x: marginLeft + 445, width: 60, align: "right" },
-      { name: "IVA", x: marginLeft + 505, width: 30, align: "center" },
-      { name: "Subtotal c/IVA", x: marginLeft + 535, width: 60, align: "right" }, // Remaining width
+      { name: "SKU", x: marginLeft, width: 80 },
+      { name: "Producto/s", x: marginLeft + 80, width: 350 },
+      { name: "Cantidad", x: marginLeft + 430, width: 60, align: "right" },
+      { name: "U. medida", x: marginLeft + 490, width: 60, align: "center" }
     ]
 
-    // Draw Column Headers
-    cols.forEach(col => {
-      const headerAlign = col.align === "right" ? "right" : (col.align === "center" ? "center" : "left")
-      // Adjust X for alignment in header
-      let drawX = col.x
-      if (col.align === "right") drawX += col.width - 2
-      if (col.align === "center") drawX += col.width / 2
-      
-      currentPageContent += pushText([col.name], drawX, tableTop - 14, "F2", 8, "0 0 0", headerAlign as any)
-      
-      // Draw vertical lines for columns
-      if (col.name !== "Código") { // Skip first line
-         currentPageContent += drawLine(col.x, tableTop, col.x, tableTop - tableHeaderHeight)
-      }
+    currentY += 10
+    cols.forEach((col) => {
+      pushText(col.name, col.x + 2, currentY, { bold: true, size: 9 })
+    })
+    currentY += 15
+
+    // Table Rows
+    order.items.forEach((item) => {
+      ensureSpace(20)
+      const product = products.find((p) => p.id === item.product_id)
+      const productName = product?.name || "Producto no encontrado"
+      const productSku = product?.sku || ""
+
+      pushText(productSku, cols[0].x + 2, currentY, { size: 9 })
+      pushText(productName, cols[1].x + 2, currentY, { size: 9 })
+      pushText(item.quantity.toString(), cols[2].x + cols[2].width - 2, currentY, {
+        size: 9,
+        align: "right"
+      })
+      pushText("unidades", cols[3].x + cols[3].width / 2, currentY, {
+        size: 9,
+        align: "center"
+      })
+
+      currentY += 15
     })
 
-    // 4. Table Rows
-    y = tableTop - tableHeaderHeight
-    const items = (order.items || []).filter((item) => item.sku !== "ENVIO")
-    let totalNeto = 0
+    // Build the PDF
+    const finalPDF = `
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /Resources << /Font << 
+/F1 4 0 R
+/F2 5 0 R
+>> >> /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Contents 6 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+6 0 obj
+<< /Length ${pdf.length} >>
+stream
+${pdf}
+endstream
+endobj
+`
 
-    for (const item of items) {
-      const nameLines = wrapText(item.description || "", 45) // Adjust char limit for column width
-      const rowHeight = Math.max(nameLines.length * 10, 14) + 4
-      
-      ensureSpace(nameLines.length)
-
-      // Calculate values
-      const qty = item.quantity ?? 0
-      const unitPrice = item.unit_price ?? 0
-      const subtotal = qty * unitPrice
-      const ivaRate = 21 // Assuming 21% standard
-      const subtotalIVA = subtotal * (1 + ivaRate / 100)
-      
-      totalNeto += subtotal
-
-      // Draw Row Data
-      const textY = y - 10
-      
-      // Código
-      currentPageContent += pushText([item.sku || ""], cols[0].x, textY, "F1", 8)
-      
-      // Producto (multiline)
-      for (let i = 0; i < nameLines.length; i++) {
-        currentPageContent += pushText([nameLines[i]], cols[1].x, textY - (i * 10), "F1", 8)
-      }
-
-      // Cantidad
-      currentPageContent += pushText([formatCurrency(qty).replace("$", "")], cols[2].x + cols[2].width - 2, textY, "F1", 8, "0 0 0", "right")
-      
-      // U. Medida
-      currentPageContent += pushText(["unidades"], cols[3].x, textY, "F1", 8)
-      
-      // Precio Unit
-      currentPageContent += pushText([formatCurrency(unitPrice).replace("$", "")], cols[4].x + cols[4].width - 2, textY, "F1", 8, "0 0 0", "right")
-      
-      // Bonif
-      currentPageContent += pushText(["0,00"], cols[5].x + cols[5].width - 2, textY, "F1", 8, "0 0 0", "right")
-      
-      // Subtotal
-      currentPageContent += pushText([formatCurrency(subtotal).replace("$", "")], cols[6].x + cols[6].width - 2, textY, "F1", 8, "0 0 0", "right")
-      
-      // Alicuota
-      currentPageContent += pushText([`${ivaRate}%`], cols[7].x + cols[7].width / 2, textY, "F1", 8, "0 0 0", "center")
-      
-      // Subtotal c/IVA
-      currentPageContent += pushText([formatCurrency(subtotalIVA).replace("$", "")], cols[8].x + cols[8].width - 2, textY, "F1", 8, "0 0 0", "right")
-
-      y -= rowHeight
-    }
-    
-    // 5. Footer (Totals)
-    const footerHeight = 100
-    const footerTop = 140 // Fixed position at bottom
-    
-    // Draw Footer Box
-    currentPageContent += drawRect(marginLeft, footerTop, contentWidth, footerHeight, "0 0 0", false)
-    
-    // Left side "Otros Tributos"
-    currentPageContent += pushText(["Importe Otros Tributos: $"], marginLeft + 150, footerTop + footerHeight - 20, "F1", 9)
-    currentPageContent += pushText(["0,00"], marginLeft + 280, footerTop + footerHeight - 20, "F1", 9)
-
-    // Right side Totals
-    let footerY = footerTop + footerHeight - 20
-    const labelX = pageWidth - 160
-    const valueX = pageWidth - 30
-    
-    const totalIVA = totalNeto * 0.21
-    const totalGeneral = totalNeto + totalIVA
-
-    const drawTotalLine = (label: string, value: string, bold: boolean = false) => {
-      currentPageContent += pushText([label], labelX, footerY, bold ? "F2" : "F2", 9, "0 0 0", "right")
-      currentPageContent += pushText([value], valueX, footerY, bold ? "F2" : "F2", 9, "0 0 0", "right")
-      footerY -= 12
-    }
-
-    drawTotalLine("Importe Neto Gravado: $", formatCurrency(totalNeto).replace("$", ""), true)
-    drawTotalLine("IVA 27%: $", "0,00")
-    drawTotalLine("IVA 21%: $", formatCurrency(totalIVA).replace("$", ""), true)
-    drawTotalLine("IVA 10.5%: $", "0,00")
-    drawTotalLine("IVA 5%: $", "0,00")
-    drawTotalLine("IVA 2.5%: $", "0,00")
-    drawTotalLine("IVA 0%: $", "0,00")
-    drawTotalLine("Importe Otros Tributos: $", "0,00")
-    drawTotalLine("Importe Total: $", formatCurrency(totalGeneral).replace("$", ""), true)
-
-    // 6. CAE / QR Area
-    const bottomY = 40
-    // QR Placeholder (Just a box for now)
-    currentPageContent += drawRect(marginLeft, bottomY, 80, 80, "0 0 0", false) 
-    // "ARCA" logo text simulated
-    currentPageContent += pushText(["ARCA"], marginLeft + 90, bottomY + 60, "F2", 16, "0.4 0.4 0.4")
-    currentPageContent += pushText(["Comprobante Autorizado"], marginLeft + 90, bottomY + 30, "F2", 10, "0 0 0", "left") // Italic usually but F2 bold is fine
-    
-    // Page number
-    currentPageContent += pushText(["Pág. 1/1"], pageWidth / 2, bottomY + 60, "F2", 10, "0 0 0", "center")
-
-    // CAE Info
-    currentPageContent += pushText(["CAE N°: 75538070174291"], pageWidth - marginRight, bottomY + 60, "F2", 10, "0 0 0", "right")
-    currentPageContent += pushText(["Fecha de Vto. de CAE: 10/01/2026"], pageWidth - marginRight, bottomY + 45, "F2", 10, "0 0 0", "right")
-
-    addPage(currentPageContent)
-
-    const buildPdf = (pageContents: string[]) => {
-      type PdfObj = { id: number; body: string }
-      const objects: PdfObj[] = []
-      const addObject = (body: string) => {
-        const id = objects.length + 1
-        objects.push({ id, body })
-        return id
-      }
-
-      const fontRegularId = addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
-      const fontBoldId = addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>")
-
-      const pageObjectIds: number[] = []
-      const contentObjectIds: number[] = []
-
-      const pagesIdPlaceholder = addObject("<< >>")
-
-      for (let i = 0; i < pageContents.length; i++) {
-        const pageNo = i + 1
-        const totalPages = pageContents.length
-        const footer = pushText([`Página ${pageNo} de ${totalPages}`], marginLeft, 34, "F1", 9)
-        const fullContent = `${pageContents[i]}${footer}`
-        const contentBytesLength = byteLengthLatin1(fullContent)
-        const contentId = addObject(`<< /Length ${contentBytesLength} >>\nstream\n${fullContent}endstream`)
-        contentObjectIds.push(contentId)
-
-        const pageId = addObject(
-          `<< /Type /Page /Parent ${pagesIdPlaceholder} 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 ${fontRegularId} 0 R /F2 ${fontBoldId} 0 R >> >> /Contents ${contentId} 0 R >>`,
-        )
-        pageObjectIds.push(pageId)
-      }
-
-      const kids = pageObjectIds.map((id) => `${id} 0 R`).join(" ")
-      objects[pagesIdPlaceholder - 1].body = `<< /Type /Pages /Kids [${kids}] /Count ${pageObjectIds.length} >>`
-
-      const catalogId = addObject(`<< /Type /Catalog /Pages ${pagesIdPlaceholder} 0 R >>`)
-
-      const header = "%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3\n"
-      const chunks: string[] = [header]
-      const offsets: number[] = [0]
-
-      let byteOffset = byteLengthLatin1(header)
-
-      for (const obj of objects) {
-        offsets[obj.id] = byteOffset
-        const chunk = `${obj.id} 0 obj\n${obj.body}\nendobj\n`
-        chunks.push(chunk)
-        byteOffset += byteLengthLatin1(chunk)
-      }
-
-      const xrefStart = byteOffset
-      const xrefLines: string[] = []
-      xrefLines.push("xref\n")
-      xrefLines.push(`0 ${objects.length + 1}\n`)
-      xrefLines.push("0000000000 65535 f \n")
-      for (let i = 1; i <= objects.length; i++) {
-        const off = offsets[i] || 0
-        xrefLines.push(`${String(off).padStart(10, "0")} 00000 n \n`)
-      }
-
-      const trailer =
-        `trailer\n<< /Size ${objects.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`
-      chunks.push(xrefLines.join(""))
-      chunks.push(trailer)
-
-      return new Blob(chunks.map((c) => encodeLatin1(c)), { type: "application/pdf" })
-    }
-
-    const pdfBlob = buildPdf(pages)
-    const url = URL.createObjectURL(pdfBlob)
-
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `Pedido_${order.id}_${sanitizeFilePart(clientName)}.pdf`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-
-    toast({ title: "Exportación completada", description: `Se exportó el pedido #${order.id}` })
+    const blob = new Blob([finalPDF], { type: "application/pdf" })
+    const link = document.createElement("a")
+    link.href = URL.createObjectURL(blob)
+    link.download = fileName
+    link.click()
   }
 
   const exportWholesalePrices = () => {
