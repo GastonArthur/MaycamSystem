@@ -1352,17 +1352,11 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
 
     const pageWidth = 595
     const pageHeight = 842
-    const marginLeft = 50
-    const marginRight = 50
-    const marginTop = 50
-    const marginBottom = 50
-    const lineHeight = 16
-
-    const colSkuX = marginLeft
-    const colNameX = 120
-    const colQtyX = pageWidth - marginRight - 60
-    const colPriceX = pageWidth - marginRight - 120
-    const colTotalX = pageWidth - marginRight - 60
+    const marginLeft = 20
+    const marginRight = 20
+    const marginTop = 40
+    const marginBottom = 40
+    const contentWidth = pageWidth - marginLeft - marginRight
 
     const pages: string[] = []
     const addPage = (content: string) => {
@@ -1372,22 +1366,29 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
     const drawLine = (x1: number, y1: number, x2: number, y2: number, width: number = 0.5) =>
       `${width} w ${x1} ${y1} m ${x2} ${y2} l S\n`
 
-    const drawRect = (x: number, y: number, width: number, height: number, color: string) =>
-      `${color} rg ${x} ${y} ${width} ${height} re f\n`
+    const drawRect = (x: number, y: number, width: number, height: number, color: string, fill: boolean = true) =>
+      fill ? `${color} rg ${x} ${y} ${width} ${height} re f\n` : `${color} RG 1 w ${x} ${y} ${width} ${height} re S\n`
 
     const pushText = (
       parts: string[],
       x: number,
       y: number,
-      font: "F1" | "F2",
+      font: "F1" | "F2", // F1 Regular, F2 Bold
       size: number,
-      color?: string,
+      color: string = "0 0 0",
       align: "left" | "center" | "right" = "left",
     ) => {
-      const colorCmd = color ? `${color} rg\n` : ""
+      const colorCmd = `${color} rg\n`
       let result = ""
       parts.forEach((text, index) => {
-        const textX = align === "center" ? x - (text.length * size * 0.35) : align === "right" ? x - (text.length * size * 0.7) : x
+        // Simple character width estimation (approximate for Helvetica)
+        const charWidth = size * 0.55
+        const textWidth = text.length * charWidth
+        
+        let textX = x
+        if (align === "center") textX = x - textWidth / 2
+        if (align === "right") textX = x - textWidth
+
         result += `BT ${colorCmd}/${font} ${size} Tf 1 0 0 1 ${textX} ${y - index * size * 1.2} Tm (${escapePdfString(text)}) Tj ET\n`
       })
       return result
@@ -1397,82 +1398,226 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
     let y = pageHeight - marginTop
 
     const ensureSpace = (linesNeeded: number) => {
-      if (y - linesNeeded * lineHeight < marginBottom) {
+      // If we are too close to bottom (leaving space for footer)
+      if (y - linesNeeded * 12 < 150) { 
         addPage(currentPageContent)
         currentPageContent = ""
         y = pageHeight - marginTop
+        // Re-draw basic header or just continue? Usually invoices repeat header or just "Continued..."
+        // For simplicity, we just start new page at top margin
       }
     }
 
-    // Header con diseño profesional
-    currentPageContent += drawRect(0, pageHeight - 100, pageWidth, 100, "0.15 0.24 0.35") // Azul oscuro profesional
-    currentPageContent += pushText(["PEDIDO"], pageWidth / 2, pageHeight - 70, "F2", 28, "1 1 1", "center")
-    currentPageContent += pushText([`#${order.id}`], pageWidth / 2, pageHeight - 45, "F1", 16, "1 1 1", "center")
+    // --- DRAWING LOGIC START ---
 
-    // Información de la empresa (simulado)
-    y = pageHeight - 120
-    currentPageContent += pushText(["MAYCAM SYSTEM"], marginLeft, y, "F2", 14, "0.15 0.24 0.35")
-    currentPageContent += pushText(["Mayorista de Productos"], marginLeft, y - 18, "F1", 10, "0.3 0.3 0.3")
-    currentPageContent += pushText(["Tel: (011) 1234-5678"], marginLeft, y - 32, "F1", 10, "0.3 0.3 0.3")
-    currentPageContent += pushText(["Email: info@maycam.com"], marginLeft, y - 46, "F1", 10, "0.3 0.3 0.3")
-
-    // Línea divisoria
-    currentPageContent += drawLine(marginLeft, y - 60, pageWidth - marginRight, y - 60, 1)
-
-    // Información del cliente
-    y = y - 80
-    currentPageContent += pushText(["CLIENTE"], marginLeft, y, "F2", 12, "0.15 0.24 0.35")
-    currentPageContent += pushText([clientName], marginLeft, y - 20, "F1", 11, "0 0 0")
+    // 1. "ORIGINAL" Header
+    currentPageContent += pushText(["ORIGINAL"], pageWidth / 2, pageHeight - 30, "F2", 12, "0 0 0", "center")
     
-    // Fecha del pedido
-    const fecha = order.order_date ? new Date(order.order_date).toLocaleDateString('es-AR') : ""
-    currentPageContent += pushText(["FECHA"], pageWidth - 200, y, "F2", 12, "0.15 0.24 0.35")
-    currentPageContent += pushText([fecha], pageWidth - 200, y - 20, "F1", 11, "0 0 0")
+    // Draw Main Box Outline
+    const headerBoxTop = pageHeight - 35
+    const headerBoxHeight = 120
+    currentPageContent += drawRect(marginLeft, headerBoxTop - headerBoxHeight, contentWidth, headerBoxHeight, "0 0 0", false)
 
-    // Línea divisoria
-    currentPageContent += drawLine(marginLeft, y - 40, pageWidth - marginRight, y - 40, 0.5)
+    // Vertical Divider for Company/Invoice
+    currentPageContent += drawLine(pageWidth / 2, headerBoxTop, pageWidth / 2, headerBoxTop - headerBoxHeight)
 
-    // Tabla de productos
-    y = y - 70
+    // Letter Box "A"
+    const letterBoxSize = 40
+    const letterBoxX = (pageWidth / 2) - (letterBoxSize / 2)
+    const letterBoxY = headerBoxTop - 50
     
-    // Encabezado de tabla con estilo
-    currentPageContent += drawRect(marginLeft, y - 10, pageWidth - marginLeft - marginRight, 30, "0.95 0.95 0.95")
-    currentPageContent += pushText(["SKU"], colSkuX, y, "F2", 11, "0.15 0.24 0.35")
-    currentPageContent += pushText(["PRODUCTO"], colNameX, y, "F2", 11, "0.15 0.24 0.35")
-    currentPageContent += pushText(["CANT."], colQtyX, y, "F2", 11, "0.15 0.24 0.35", "right")
+    // Clear background for letter box to hide the vertical line
+    currentPageContent += drawRect(letterBoxX, letterBoxY, letterBoxSize, letterBoxSize + 10, "1 1 1", true)
+    // Draw Letter Box Border
+    currentPageContent += drawRect(letterBoxX, letterBoxY, letterBoxSize, letterBoxSize, "0 0 0", false)
+    
+    // "A" and "COD. 01"
+    currentPageContent += pushText(["A"], pageWidth / 2, letterBoxY + 10, "F2", 24, "0 0 0", "center")
+    currentPageContent += pushText(["COD. 01"], pageWidth / 2, letterBoxY - 8, "F2", 6, "0 0 0", "center")
 
-    y = y - 30
+    // Left Side: Company Info
+    let leftY = headerBoxTop - 25
+    currentPageContent += pushText(["MAYCAM SYSTEM"], marginLeft + 10, leftY, "F2", 14, "0 0 0")
+    leftY -= 25
+    currentPageContent += pushText(["Razón Social: MAYCAM SYSTEM"], marginLeft + 10, leftY, "F1", 9)
+    leftY -= 15
+    currentPageContent += pushText(["Domicilio Comercial: Dirección de la empresa"], marginLeft + 10, leftY, "F1", 9)
+    leftY -= 15
+    currentPageContent += pushText(["Condición frente al IVA: Responsable Inscripto"], marginLeft + 10, leftY, "F2", 9)
 
-    // Filtrar productos ENVIO
+    // Right Side: Invoice Info
+    let rightY = headerBoxTop - 25
+    const rightColX = pageWidth / 2 + 20
+    currentPageContent += pushText(["FACTURA"], rightColX, rightY, "F2", 18, "0 0 0")
+    rightY -= 20
+    currentPageContent += pushText([`Punto de Venta: 00001   Comp. Nro: ${String(order.id).padStart(8, '0')}`], rightColX, rightY, "F2", 9)
+    rightY -= 15
+    const orderDate = order.order_date ? new Date(order.order_date).toLocaleDateString('es-AR') : new Date().toLocaleDateString('es-AR')
+    currentPageContent += pushText([`Fecha de Emisión: ${orderDate}`], rightColX, rightY, "F2", 9)
+    rightY -= 20
+    currentPageContent += pushText(["CUIT: 30-00000000-0"], rightColX, rightY, "F2", 9)
+    rightY -= 12
+    currentPageContent += pushText(["Ingresos Brutos: 000-000000"], rightColX, rightY, "F1", 9)
+    rightY -= 12
+    currentPageContent += pushText(["Fecha de Inicio de Actividades: 01/01/2020"], rightColX, rightY, "F1", 9)
+
+    // 2. Client Box
+    const clientBoxTop = headerBoxTop - headerBoxHeight - 5
+    const clientBoxHeight = 50
+    currentPageContent += drawRect(marginLeft, clientBoxTop - clientBoxHeight, contentWidth, clientBoxHeight, "0 0 0", false)
+
+    let clientY = clientBoxTop - 15
+    const clientData = clients.find((c) => c.id === order.client_id)
+    
+    currentPageContent += pushText([`CUIT: ${clientData?.cuit || ""}`], marginLeft + 10, clientY, "F2", 9)
+    currentPageContent += pushText([`Apellido y Nombre / Razón Social: ${clientName}`], marginLeft + 150, clientY, "F2", 9)
+    
+    clientY -= 20
+    currentPageContent += pushText(["Condición frente al IVA: Responsable Inscripto"], marginLeft + 10, clientY, "F2", 9)
+    currentPageContent += pushText([`Domicilio Comercial: ${clientData?.address || ""} ${clientData?.city || ""}`], marginLeft + 250, clientY, "F1", 9)
+
+    // 3. Table Header
+    const tableTop = clientBoxTop - clientBoxHeight - 10
+    const tableHeaderHeight = 20
+    
+    // Draw Header Background
+    currentPageContent += drawRect(marginLeft, tableTop - tableHeaderHeight, contentWidth, tableHeaderHeight, "0.85 0.85 0.85", true)
+    // Draw Header Border
+    currentPageContent += drawRect(marginLeft, tableTop - tableHeaderHeight, contentWidth, tableHeaderHeight, "0 0 0", false)
+
+    // Columns Configuration
+    const cols = [
+      { name: "Código", x: marginLeft + 5, width: 40 },
+      { name: "Producto / Servicio", x: marginLeft + 45, width: 200 },
+      { name: "Cantidad", x: marginLeft + 245, width: 50, align: "right" },
+      { name: "U. medida", x: marginLeft + 295, width: 50 },
+      { name: "Precio Unit.", x: marginLeft + 345, width: 60, align: "right" },
+      { name: "% Bonif", x: marginLeft + 405, width: 40, align: "right" },
+      { name: "Subtotal", x: marginLeft + 445, width: 60, align: "right" },
+      { name: "IVA", x: marginLeft + 505, width: 30, align: "center" },
+      { name: "Subtotal c/IVA", x: marginLeft + 535, width: 60, align: "right" }, // Remaining width
+    ]
+
+    // Draw Column Headers
+    cols.forEach(col => {
+      const headerAlign = col.align === "right" ? "right" : (col.align === "center" ? "center" : "left")
+      // Adjust X for alignment in header
+      let drawX = col.x
+      if (col.align === "right") drawX += col.width - 2
+      if (col.align === "center") drawX += col.width / 2
+      
+      currentPageContent += pushText([col.name], drawX, tableTop - 14, "F2", 8, "0 0 0", headerAlign as any)
+      
+      // Draw vertical lines for columns
+      if (col.name !== "Código") { // Skip first line
+         currentPageContent += drawLine(col.x, tableTop, col.x, tableTop - tableHeaderHeight)
+      }
+    })
+
+    // 4. Table Rows
+    y = tableTop - tableHeaderHeight
     const items = (order.items || []).filter((item) => item.sku !== "ENVIO")
-    
+    let totalNeto = 0
+
     for (const item of items) {
-      const nameLines = wrapText(item.description || "", 60)
-      ensureSpace(nameLines.length + 2)
-
-      // Fila alternada con color suave
-      if (items.indexOf(item) % 2 === 0) {
-        currentPageContent += drawRect(marginLeft, y - 5, pageWidth - marginLeft - marginRight, nameLines.length * lineHeight + 10, "0.98 0.98 0.98")
-      }
-
-      currentPageContent += pushText([item.sku || ""], colSkuX, y, "F1", 10, "0 0 0")
-      currentPageContent += pushText([`${item.quantity ?? 0}`], colQtyX, y, "F1", 10, "0 0 0", "right")
+      const nameLines = wrapText(item.description || "", 45) // Adjust char limit for column width
+      const rowHeight = Math.max(nameLines.length * 10, 14) + 4
       
-      // Producto con manejo de múltiples líneas
+      ensureSpace(nameLines.length)
+
+      // Calculate values
+      const qty = item.quantity ?? 0
+      const unitPrice = item.unit_price ?? 0
+      const subtotal = qty * unitPrice
+      const ivaRate = 21 // Assuming 21% standard
+      const subtotalIVA = subtotal * (1 + ivaRate / 100)
+      
+      totalNeto += subtotal
+
+      // Draw Row Data
+      const textY = y - 10
+      
+      // Código
+      currentPageContent += pushText([item.sku || ""], cols[0].x, textY, "F1", 8)
+      
+      // Producto (multiline)
       for (let i = 0; i < nameLines.length; i++) {
-        currentPageContent += pushText([nameLines[i]], colNameX, y - i * 14, "F1", 10, "0 0 0")
+        currentPageContent += pushText([nameLines[i]], cols[1].x, textY - (i * 10), "F1", 8)
       }
+
+      // Cantidad
+      currentPageContent += pushText([formatCurrency(qty).replace("$", "")], cols[2].x + cols[2].width - 2, textY, "F1", 8, "0 0 0", "right")
       
-      y -= Math.max(nameLines.length * lineHeight, lineHeight) + 8
+      // U. Medida
+      currentPageContent += pushText(["unidades"], cols[3].x, textY, "F1", 8)
       
-      // Línea separadora entre productos
-      if (items.indexOf(item) < items.length - 1) {
-        currentPageContent += drawLine(marginLeft, y + 4, pageWidth - marginRight, y + 4, 0.3)
-      }
+      // Precio Unit
+      currentPageContent += pushText([formatCurrency(unitPrice).replace("$", "")], cols[4].x + cols[4].width - 2, textY, "F1", 8, "0 0 0", "right")
+      
+      // Bonif
+      currentPageContent += pushText(["0,00"], cols[5].x + cols[5].width - 2, textY, "F1", 8, "0 0 0", "right")
+      
+      // Subtotal
+      currentPageContent += pushText([formatCurrency(subtotal).replace("$", "")], cols[6].x + cols[6].width - 2, textY, "F1", 8, "0 0 0", "right")
+      
+      // Alicuota
+      currentPageContent += pushText([`${ivaRate}%`], cols[7].x + cols[7].width / 2, textY, "F1", 8, "0 0 0", "center")
+      
+      // Subtotal c/IVA
+      currentPageContent += pushText([formatCurrency(subtotalIVA).replace("$", "")], cols[8].x + cols[8].width - 2, textY, "F1", 8, "0 0 0", "right")
+
+      y -= rowHeight
+    }
+    
+    // 5. Footer (Totals)
+    const footerHeight = 100
+    const footerTop = 140 // Fixed position at bottom
+    
+    // Draw Footer Box
+    currentPageContent += drawRect(marginLeft, footerTop, contentWidth, footerHeight, "0 0 0", false)
+    
+    // Left side "Otros Tributos"
+    currentPageContent += pushText(["Importe Otros Tributos: $"], marginLeft + 150, footerTop + footerHeight - 20, "F1", 9)
+    currentPageContent += pushText(["0,00"], marginLeft + 280, footerTop + footerHeight - 20, "F1", 9)
+
+    // Right side Totals
+    let footerY = footerTop + footerHeight - 20
+    const labelX = pageWidth - 160
+    const valueX = pageWidth - 30
+    
+    const totalIVA = totalNeto * 0.21
+    const totalGeneral = totalNeto + totalIVA
+
+    const drawTotalLine = (label: string, value: string, bold: boolean = false) => {
+      currentPageContent += pushText([label], labelX, footerY, bold ? "F2" : "F2", 9, "0 0 0", "right")
+      currentPageContent += pushText([value], valueX, footerY, bold ? "F2" : "F2", 9, "0 0 0", "right")
+      footerY -= 12
     }
 
-    // Línea final de la tabla
-    currentPageContent += drawLine(marginLeft, y, pageWidth - marginRight, y, 1)
+    drawTotalLine("Importe Neto Gravado: $", formatCurrency(totalNeto).replace("$", ""), true)
+    drawTotalLine("IVA 27%: $", "0,00")
+    drawTotalLine("IVA 21%: $", formatCurrency(totalIVA).replace("$", ""), true)
+    drawTotalLine("IVA 10.5%: $", "0,00")
+    drawTotalLine("IVA 5%: $", "0,00")
+    drawTotalLine("IVA 2.5%: $", "0,00")
+    drawTotalLine("IVA 0%: $", "0,00")
+    drawTotalLine("Importe Otros Tributos: $", "0,00")
+    drawTotalLine("Importe Total: $", formatCurrency(totalGeneral).replace("$", ""), true)
+
+    // 6. CAE / QR Area
+    const bottomY = 40
+    // QR Placeholder (Just a box for now)
+    currentPageContent += drawRect(marginLeft, bottomY, 80, 80, "0 0 0", false) 
+    // "ARCA" logo text simulated
+    currentPageContent += pushText(["ARCA"], marginLeft + 90, bottomY + 60, "F2", 16, "0.4 0.4 0.4")
+    currentPageContent += pushText(["Comprobante Autorizado"], marginLeft + 90, bottomY + 30, "F2", 10, "0 0 0", "left") // Italic usually but F2 bold is fine
+    
+    // Page number
+    currentPageContent += pushText(["Pág. 1/1"], pageWidth / 2, bottomY + 60, "F2", 10, "0 0 0", "center")
+
+    // CAE Info
+    currentPageContent += pushText(["CAE N°: 75538070174291"], pageWidth - marginRight, bottomY + 60, "F2", 10, "0 0 0", "right")
+    currentPageContent += pushText(["Fecha de Vto. de CAE: 10/01/2026"], pageWidth - marginRight, bottomY + 45, "F2", 10, "0 0 0", "right")
 
     addPage(currentPageContent)
 
