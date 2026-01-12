@@ -1308,159 +1308,252 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
         .replace(/\s+/g, "_")
         .replace(/[^A-Za-z0-9_-]/g, "")
 
-    const fileName = `${sanitizeFilePart(clientName)}_pedido_${order.id}.pdf`
+    const toPdfText = (value: string) => value.replace(/\s+/g, " ").trim()
 
-    const pageWidth = 595.28
-    const pageHeight = 841.89
-    const marginLeft = 40
-    const marginRight = 40
-    const contentWidth = pageWidth - marginLeft - marginRight
+    const escapePdfString = (value: string) =>
+      toPdfText(value).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)")
 
-    let pdf = ""
-    let currentY = 0
-
-    const push = (str: string) => {
-      pdf += str + "\n"
-    }
-
-    const latin1 = (str: string) => {
-      let result = ""
-      for (let i = 0; i < str.length; i++) {
-        const charCode = str.charCodeAt(i)
-        if (charCode > 255) {
-          result += String.fromCharCode(94) // Replace non-Latin-1 with '^'
+    const wrapText = (text: string, maxChars: number) => {
+      const clean = toPdfText(text)
+      if (!clean) return [""]
+      const words = clean.split(/\s+/g)
+      const lines: string[] = []
+      let current = ""
+      for (const word of words) {
+        const next = current ? `${current} ${word}` : word
+        if (next.length <= maxChars) {
+          current = next
+          continue
+        }
+        if (current) lines.push(current)
+        if (word.length > maxChars) {
+          let start = 0
+          while (start < word.length) {
+            lines.push(word.slice(start, start + maxChars))
+            start += maxChars
+          }
+          current = ""
         } else {
-          result += str.charAt(i)
+          current = word
         }
       }
+      if (current) lines.push(current)
+      return lines.length ? lines : [""]
+    }
+
+    const encodeLatin1 = (input: string) => {
+      const bytes = new Uint8Array(input.length)
+      for (let i = 0; i < input.length; i++) {
+        const code = input.charCodeAt(i)
+        bytes[i] = code <= 0xff ? code : 63
+      }
+      return bytes
+    }
+
+    const byteLengthLatin1 = (input: string) => encodeLatin1(input).length
+
+    const pageWidth = 595
+    const pageHeight = 842
+    const marginLeft = 20
+    const marginRight = 20
+    const marginTop = 40
+    const marginBottom = 40
+    const contentWidth = pageWidth - marginLeft - marginRight
+
+    const drawLine = (x1: number, y1: number, x2: number, y2: number, width: number = 0.5) =>
+      `${width} w ${x1} ${y1} m ${x2} ${y2} l S\n`
+
+    const drawRect = (x: number, y: number, width: number, height: number, color: string, fill: boolean = true) =>
+      fill ? `${color} rg ${x} ${y} ${width} ${height} re f\n` : `${color} RG 1 w ${x} ${y} ${width} ${height} re S\n`
+
+    const pushText = (
+      parts: string[],
+      x: number,
+      y: number,
+      font: "F1" | "F2",
+      size: number,
+      color: string = "0 0 0",
+      align: "left" | "center" | "right" = "left",
+    ) => {
+      const colorCmd = `${color} rg\n`
+      let result = ""
+      parts.forEach((text, index) => {
+        const safeText = escapePdfString(text)
+        const charWidth = size * 0.55
+        const textWidth = safeText.length * charWidth
+
+        let textX = x
+        if (align === "center") textX = x - textWidth / 2
+        if (align === "right") textX = x - textWidth
+
+        result += `BT ${colorCmd}/${font} ${size} Tf 1 0 0 1 ${textX} ${y - index * size * 1.2} Tm (${safeText}) Tj ET\n`
+      })
       return result
     }
 
-    const pushText = (
-      text: string,
-      x: number,
-      y: number,
-      options: {
-        size?: number
-        bold?: boolean
-        align?: "left" | "center" | "right"
-        color?: string
-      } = {}
-    ) => {
-      const { size = 10, bold = false, align = "left", color = "0 g" } = options
-      let textX = x
-      if (align === "center") {
-        // This is a rough approximation. For accurate centering, we'd need font metrics.
-        textX = x - text.length * size * 0.25
-      } else if (align === "right") {
-        textX = x - text.length * size * 0.5
-      }
-
-      push("BT")
-      push(`/F${bold ? 2 : 1} ${size} Tf`)
-      push(`${textX} ${pageHeight - y} Td`)
-      if (color !== "0 g") {
-        push(color)
-      }
-      push(`(${latin1(text)}) Tj`)
-      push("ET")
-    }
-
-    const startPage = () => {
-      currentY = marginLeft
-      pushText("Maycam Games", marginLeft, currentY, { size: 16, bold: true })
-      currentY += 30
-
-      pushText(`Pedido N°: ${order.id}`, marginLeft, currentY)
-      pushText(
-        `Fecha: ${new Date(order.created_at).toLocaleDateString("es-AR")}`,
-        contentWidth - 100,
-        currentY
-      )
-      currentY += 20
-
-      pushText(`Apellido y Nombre: ${clientName}`, marginLeft, currentY)
-      currentY += 15
-      pushText(`CUIT / DNI: ${clientCuit}`, marginLeft, currentY)
-      currentY += 30
-    }
-
-    const ensureSpace = (spaceNeeded: number) => {
-      if (currentY + spaceNeeded > pageHeight - marginRight) {
-        startPage() // This will reset currentY
-      }
-    }
-
-    startPage()
-
-    // Table Header
     const cols = [
-      { name: "SKU", x: marginLeft, width: 80 },
-      { name: "Producto/s", x: marginLeft + 80, width: 350 },
-      { name: "Cantidad", x: marginLeft + 430, width: 60, align: "right" },
-      { name: "U. medida", x: marginLeft + 490, width: 60, align: "center" }
+      { name: "SKU", x: marginLeft, width: 80, align: "left" as const },
+      { name: "Producto/s", x: marginLeft + 80, width: 315, align: "left" as const },
+      { name: "Cantidad", x: marginLeft + 395, width: 80, align: "right" as const },
+      { name: "U. medida", x: marginLeft + 475, width: 80, align: "center" as const },
     ]
 
-    currentY += 10
-    cols.forEach((col) => {
-      pushText(col.name, col.x + 2, currentY, { bold: true, size: 9 })
-    })
-    currentY += 15
+    const pages: string[] = []
+    const addPage = (content: string) => pages.push(content)
 
-    // Table Rows
-    order.items.forEach((item) => {
-      ensureSpace(20)
-      const product = products.find((p) => p.id === item.product_id)
-      const productName = product?.name || "Producto no encontrado"
-      const productSku = product?.sku || ""
+    let currentPageContent = ""
+    let y = pageHeight - marginTop
 
-      pushText(productSku, cols[0].x + 2, currentY, { size: 9 })
-      pushText(productName, cols[1].x + 2, currentY, { size: 9 })
-      pushText(item.quantity.toString(), cols[2].x + cols[2].width - 2, currentY, {
-        size: 9,
-        align: "right"
+    const drawHeaderAndTableHeader = () => {
+      const orderDate = order.order_date
+        ? new Date(order.order_date).toLocaleDateString("es-AR")
+        : new Date(order.created_at).toLocaleDateString("es-AR")
+
+      currentPageContent += pushText(["Maycam Games"], marginLeft, y, "F2", 16)
+      currentPageContent += pushText([`Pedido N°: ${order.id}`], pageWidth - marginRight, y, "F2", 10, "0 0 0", "right")
+      y -= 22
+      currentPageContent += pushText([`Fecha: ${orderDate}`], pageWidth - marginRight, y, "F1", 9, "0 0 0", "right")
+      currentPageContent += pushText([`Apellido y Nombre: ${clientName}`], marginLeft, y, "F1", 10)
+      y -= 14
+      currentPageContent += pushText([`CUIT / DNI: ${clientCuit}`], marginLeft, y, "F1", 10)
+      y -= 22
+
+      const tableTop = y
+      const tableHeaderHeight = 20
+      currentPageContent += drawRect(marginLeft, tableTop - tableHeaderHeight, contentWidth, tableHeaderHeight, "0.9 0.9 0.9", true)
+      currentPageContent += drawRect(marginLeft, tableTop - tableHeaderHeight, contentWidth, tableHeaderHeight, "0 0 0", false)
+
+      cols.forEach((col) => {
+        let drawX = col.x + 2
+        if (col.align === "right") drawX = col.x + col.width - 2
+        if (col.align === "center") drawX = col.x + col.width / 2
+        currentPageContent += pushText([col.name], drawX, tableTop - 14, "F2", 8, "0 0 0", col.align)
+        if (col.x !== marginLeft) {
+          currentPageContent += drawLine(col.x, tableTop, col.x, tableTop - tableHeaderHeight)
+        }
       })
-      pushText("unidades", cols[3].x + cols[3].width / 2, currentY, {
-        size: 9,
-        align: "center"
-      })
 
-      currentY += 15
-    })
+      y = tableTop - tableHeaderHeight - 6
+    }
 
-    // Build the PDF
-    const finalPDF = `
-1 0 obj
-<< /Type /Catalog /Pages 2 0 R >>
-endobj
-2 0 obj
-<< /Type /Pages /Kids [3 0 R] /Count 1 >>
-endobj
-3 0 obj
-<< /Type /Page /Parent 2 0 R /Resources << /Font << 
-/F1 4 0 R
-/F2 5 0 R
->> >> /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Contents 6 0 R >>
-endobj
-4 0 obj
-<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
-endobj
-5 0 obj
-<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
-endobj
-6 0 obj
-<< /Length ${pdf.length} >>
-stream
-${pdf}
-endstream
-endobj
-`
+    const startNewPage = () => {
+      if (currentPageContent) addPage(currentPageContent)
+      currentPageContent = ""
+      y = pageHeight - marginTop
+      drawHeaderAndTableHeader()
+    }
 
-    const blob = new Blob([finalPDF], { type: "application/pdf" })
-    const link = document.createElement("a")
-    link.href = URL.createObjectURL(blob)
-    link.download = fileName
-    link.click()
+    const ensureSpace = (neededHeight: number) => {
+      if (y - neededHeight < marginBottom + 20) startNewPage()
+    }
+
+    drawHeaderAndTableHeader()
+
+    const items = (order.items || []).filter((item) => item.sku !== "ENVIO")
+
+    for (const item of items) {
+      const fallbackProduct = item.product_id ? products.find((p) => p.id === item.product_id) : undefined
+      const sku = item.sku || fallbackProduct?.sku || ""
+      const description = item.description || fallbackProduct?.name || ""
+      const qty = Number(item.quantity ?? 0)
+      const nameLines = wrapText(description, 52)
+      const rowHeight = Math.max(nameLines.length * 10, 12) + 6
+
+      ensureSpace(rowHeight)
+
+      const textY = y - 10
+
+      currentPageContent += pushText([sku], cols[0].x + 2, textY, "F1", 8)
+
+      for (let i = 0; i < nameLines.length; i++) {
+        currentPageContent += pushText([nameLines[i]], cols[1].x + 2, textY - i * 10, "F1", 8)
+      }
+
+      currentPageContent += pushText([toPdfText(String(qty))], cols[2].x + cols[2].width - 2, textY, "F1", 8, "0 0 0", "right")
+      currentPageContent += pushText(["unidades"], cols[3].x + cols[3].width / 2, textY, "F1", 8, "0 0 0", "center")
+
+      y -= rowHeight
+    }
+
+    addPage(currentPageContent)
+
+    const buildPdf = (pageContents: string[]) => {
+      type PdfObj = { id: number; body: string }
+      const objects: PdfObj[] = []
+      const addObject = (body: string) => {
+        const id = objects.length + 1
+        objects.push({ id, body })
+        return id
+      }
+
+      const fontRegularId = addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+      const fontBoldId = addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>")
+
+      const pageObjectIds: number[] = []
+      const pagesIdPlaceholder = addObject("<< >>")
+
+      for (let i = 0; i < pageContents.length; i++) {
+        const pageNo = i + 1
+        const totalPages = pageContents.length
+        const footer = pushText([`Página ${pageNo} de ${totalPages}`], marginLeft, 34, "F1", 9)
+        const fullContent = `${pageContents[i]}${footer}`
+        const contentBytesLength = byteLengthLatin1(fullContent)
+        const contentId = addObject(`<< /Length ${contentBytesLength} >>\nstream\n${fullContent}endstream`)
+
+        const pageId = addObject(
+          `<< /Type /Page /Parent ${pagesIdPlaceholder} 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 ${fontRegularId} 0 R /F2 ${fontBoldId} 0 R >> >> /Contents ${contentId} 0 R >>`,
+        )
+        pageObjectIds.push(pageId)
+      }
+
+      const kids = pageObjectIds.map((id) => `${id} 0 R`).join(" ")
+      objects[pagesIdPlaceholder - 1].body = `<< /Type /Pages /Kids [${kids}] /Count ${pageObjectIds.length} >>`
+
+      const catalogId = addObject(`<< /Type /Catalog /Pages ${pagesIdPlaceholder} 0 R >>`)
+
+      const header = "%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3\n"
+      const chunks: string[] = [header]
+      const offsets: number[] = [0]
+
+      let byteOffset = byteLengthLatin1(header)
+
+      for (const obj of objects) {
+        offsets[obj.id] = byteOffset
+        const chunk = `${obj.id} 0 obj\n${obj.body}\nendobj\n`
+        chunks.push(chunk)
+        byteOffset += byteLengthLatin1(chunk)
+      }
+
+      const xrefStart = byteOffset
+      const xrefLines: string[] = []
+      xrefLines.push("xref\n")
+      xrefLines.push(`0 ${objects.length + 1}\n`)
+      xrefLines.push("0000000000 65535 f \n")
+      for (let i = 1; i <= objects.length; i++) {
+        const off = offsets[i] || 0
+        xrefLines.push(`${String(off).padStart(10, "0")} 00000 n \n`)
+      }
+
+      const trailer =
+        `trailer\n<< /Size ${objects.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`
+      chunks.push(xrefLines.join(""))
+      chunks.push(trailer)
+
+      return new Blob(chunks.map((c) => encodeLatin1(c)), { type: "application/pdf" })
+    }
+
+    const pdfBlob = buildPdf(pages)
+    const url = URL.createObjectURL(pdfBlob)
+
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `Pedido_${order.id}_${sanitizeFilePart(clientName)}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+
+    toast({ title: "Exportación completada", description: `Se exportó el pedido #${order.id}` })
   }
 
   const exportWholesalePrices = () => {
