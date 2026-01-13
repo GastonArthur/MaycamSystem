@@ -2764,7 +2764,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>ID</TableHead>
+                        <TableHead>Nº</TableHead>
                         <TableHead className="hidden md:table-cell">Fecha</TableHead>
                         <TableHead>Cliente</TableHead>
                         {/* Columna Vendedor añadida */}
@@ -2796,7 +2796,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                             matchesClient && matchesVendor && matchesEstado && matchesFechaInicio && matchesFechaFin
                           )
                         })
-                        .map((order) => {
+                        .map((order, idx) => {
                           const clientName =
                             clients.find((c) => c.id === order.client_id)?.name || "Cliente desconocido"
                           const hasMultipleItems = (order.items?.length || 0) > 1
@@ -2804,7 +2804,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                           return (
                             <>
                               <TableRow key={order.id}>
-                                <TableCell className="font-medium">#{order.id}</TableCell>
+                                <TableCell className="font-medium">#{idx + 1}</TableCell>
                                 <TableCell className="hidden md:table-cell">{formatDate(order.order_date)}</TableCell>
                                 <TableCell>{clientName}</TableCell>
                                 {/* Mostrar nombre del vendedor */}
