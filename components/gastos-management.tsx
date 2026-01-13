@@ -18,19 +18,7 @@ import { formatCurrency } from "@/lib/utils"
 import { hasPermission, getCurrentUser } from "@/lib/auth"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { logError } from "@/lib/logger"
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts"
+
 
 // NOTE: Para habilitar exportación PDF, instalar: npm install jspdf jspdf-autotable
 // import jsPDF from 'jspdf'
@@ -422,43 +410,10 @@ export function GastosManagement({ onUpdateExpenses }: GastosManagementProps) {
 
   // --- EXPORT PDF & EXCEL ---
 
-  const exportPDF = () => {
-    toast({
-      title: "Información",
-      description:
-        "Para habilitar PDF, descomente las líneas de importación de jspdf en el código después de instalar las dependencias.",
-    })
-    // Implementation example if libraries were available:
-    /*
-    const doc = new jsPDF()
-    autoTable(doc, {
-        head: [['Fecha', 'Descripción', 'Monto', 'Categoría']],
-        body: filteredExpenses.map(e => [e.expense_date, e.description, `$${e.amount}`, e.expense_categories?.name || ''])
-    })
-    doc.save('gastos.pdf')
-    */
-  }
+
 
   // --- STATS DATA ---
-  const statsByCategory = useMemo(() => {
-    const filtered = getFilteredExpenses()
-    const byCat: Record<string, number> = {}
-    filtered.forEach((e) => {
-      const cat = e.expense_categories?.name || "Sin Categoría"
-      byCat[cat] = (byCat[cat] || 0) + e.amount
-    })
-    return Object.entries(byCat).map(([name, value]) => ({ name, value }))
-  }, [expenses, filters])
 
-  const statsInvoice = useMemo(() => {
-    const filtered = getFilteredExpenses()
-    const withInv = filtered.filter((e) => e.has_invoice).reduce((sum, e) => sum + e.amount, 0)
-    const withoutInv = filtered.filter((e) => !e.has_invoice).reduce((sum, e) => sum + e.amount, 0)
-    return [
-      { name: "Con Factura", value: withInv, color: "#10B981" },
-      { name: "Sin Factura", value: withoutInv, color: "#EF4444" },
-    ]
-  }, [expenses, filters])
 
   // --- RENDER HELPERS ---
   const getPaymentMethodLabel = (method: string) => method.charAt(0).toUpperCase() + method.slice(1)
@@ -484,12 +439,10 @@ export function GastosManagement({ onUpdateExpenses }: GastosManagementProps) {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto">
+        <TabsList className="grid w-full grid-cols-3 md:grid-cols-3 h-auto">
           <TabsTrigger value="gastos">Gastos</TabsTrigger>
           <TabsTrigger value="recurrentes">Recurrentes</TabsTrigger>
           <TabsTrigger value="presupuestos">Presupuestos</TabsTrigger>
-          <TabsTrigger value="estadisticas">Estadísticas</TabsTrigger>
-          <TabsTrigger value="reportes">Reportes</TabsTrigger>
         </TabsList>
 
         {/* --- TAB GASTOS --- */}
@@ -835,90 +788,7 @@ export function GastosManagement({ onUpdateExpenses }: GastosManagementProps) {
           </Card>
         </TabsContent>
 
-        {/* --- TAB ESTADISTICAS --- */}
-        <TabsContent value="estadisticas">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Gastos por Categoría</CardTitle>
-              </CardHeader>
-              <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statsByCategory}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      fill="#8884d8"
-                      label
-                    >
-                      {statsByCategory.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"][index % 5]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Con vs Sin Factura</CardTitle>
-              </CardHeader>
-              <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={statsInvoice}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                    <Bar dataKey="value">
-                      {statsInvoice.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
 
-        {/* --- TAB REPORTES --- */}
-        <TabsContent value="reportes">
-          <Card>
-            <CardHeader>
-              <CardTitle>Centro de Reportes</CardTitle>
-              <CardDescription>Exportación de datos para contabilidad y control.</CardDescription>
-            </CardHeader>
-            <CardContent className="flex gap-4">
-              <Button
-                onClick={() => {
-                  // Reutilizar lógica existente de Excel (simplificada aquí para brevedad)
-                  toast({ title: "Exportando Excel", description: "Iniciando descarga..." })
-                  // Lógica real de excel está en el componente original, se puede mover aquí
-                }}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <FileText className="mr-2 h-4 w-4" /> Exportar Excel Completo
-              </Button>
-              <Button
-                onClick={exportPDF}
-                variant="outline"
-                className="border-red-500 text-red-500 hover:bg-red-50 bg-transparent"
-              >
-                <Download className="mr-2 h-4 w-4" /> Exportar PDF (Requiere Librería)
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
       {/* --- MODALS --- */}
