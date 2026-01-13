@@ -2402,7 +2402,8 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                             matchesClient && matchesVendor && matchesEstado && matchesFechaInicio && matchesFechaFin
                           )
                         })
-                        .map((order) => {
+                        .sort((a, b) => new Date(a.order_date).getTime() - new Date(b.order_date).getTime())
+                        .map((order, idx) => {
                           const clientName =
                             clients.find((c) => c.id === order.client_id)?.name || "Cliente desconocido"
                           const hasMultipleItems = (order.items?.length || 0) > 1
@@ -2410,7 +2411,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                           return (
                             <>
                               <TableRow key={order.id}>
-                                <TableCell className="font-medium">#{order.id}</TableCell>
+                                <TableCell className="font-medium">#{idx + 1}</TableCell>
                                 <TableCell className="hidden md:table-cell">{formatDate(order.order_date)}</TableCell>
                                 <TableCell>{clientName}</TableCell>
                                 <TableCell>

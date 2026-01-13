@@ -2796,6 +2796,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                             matchesClient && matchesVendor && matchesEstado && matchesFechaInicio && matchesFechaFin
                           )
                         })
+                        .sort((a, b) => new Date(a.order_date).getTime() - new Date(b.order_date).getTime())
                         .map((order, idx) => {
                           const clientName =
                             clients.find((c) => c.id === order.client_id)?.name || "Cliente desconocido"
