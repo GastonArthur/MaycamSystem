@@ -2874,7 +2874,6 @@ ${csvRows
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 
-
               <TabsContent value="inventory" className="space-y-6">
                 {/* IVA Config Section - Moved inside Inventory Tab */}
                 {hasPermission("EDIT_CONFIG") && (
@@ -4013,6 +4012,32 @@ ${csvRows
                           <ChevronsRight className="h-4 w-4" />
                         </Button>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="rentabilidad" className="space-y-6">
+                <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+                  <CardHeader className="bg-gradient-to-r from-rose-50 to-pink-50 rounded-t-lg">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2 text-rose-800">
+                        <TrendingUp className="w-5 h-5" />
+                        Rentabilidad Real
+                      </CardTitle>
+                      <Badge variant="outline" className="text-xs text-rose-700 bg-rose-100 border-rose-200">
+                        Vista integrada
+                      </Badge>
+                    </div>
+                    <CardDescription>
+                      Panel completo embebido. Para pantalla completa se puede abrir en su ruta dedicada.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="w-full h-[75vh]">
+                      <iframe
+                        src="/dashboard/rentabilidad"
+                        className="w-full h-full border-0"
+                      />
                     </div>
                   </CardContent>
                 </Card>

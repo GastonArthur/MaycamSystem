@@ -328,14 +328,13 @@ export function AppSidebar({
                     <>
                       <SidebarMenuItem>
                         <SidebarMenuButton
+                          onClick={() => handleNavigation("rentabilidad")}
                           isActive={activeTab === "rentabilidad"}
                           tooltip="Rentabilidad Real"
-                          className="h-11 pl-8 pr-3 rounded-none text-white hover:text-white hover:[&_svg]:text-white bg-transparent border-none hover:bg-transparent data-[active=true]:bg-[#424242] data-[active=true]:text-white data-[active=true]:outline-none data-[active=true]:[&_svg]:text-white transition-colors text-[0.9em] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
+                          className="h-11 pl-8 pr-3 rounded-none text-white hover:text-white hover:[&_svg]:text-white bg-transparent border-none hover:bg-transparent data-[active=true]:bg-[#424242] data-[active=true]:text-white data-[active=true]:outline-none data-[active=true]:[&_svg]:text-white transition-colors text-[0.9em] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>svg]:text-rose-400"
                         >
-                          <Link href="/dashboard/rentabilidad" className="flex items-center gap-2 w-full group-data-[collapsible=icon]:[&>svg]:text-rose-400">
-                            <TrendingUp className="size-5 shrink-0" strokeWidth={2} />
-                            <span className="text-xs font-medium tracking-tight">Rentabilidad Real</span>
-                          </Link>
+                          <TrendingUp className="size-5 shrink-0" strokeWidth={2} />
+                          <span className="text-xs font-medium tracking-tight">Rentabilidad Real</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       <SidebarMenuItem>
