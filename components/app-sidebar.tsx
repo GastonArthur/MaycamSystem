@@ -113,7 +113,7 @@ export function AppSidebar({
           )}
         </button>
       </SidebarHeader>
-      <SidebarContent className="px-3 py-4 bg-[#2c2c2c] overflow-y-auto">
+      <SidebarContent className="px-3 py-4 bg-[#2c2c2c] overflow-y-auto text-xs">
         <SidebarGroup className="p-0">
           <SidebarGroupContent>
             <SidebarMenu className="gap-3 group-data-[collapsible=icon]:gap-1">
@@ -125,7 +125,7 @@ export function AppSidebar({
                   className="h-11 px-3 rounded-none text-white hover:text-white hover:[&_svg]:text-white bg-transparent border-none hover:bg-transparent data-[active=true]:bg-[#424242] data-[active=true]:text-white data-[active=true]:outline-none data-[active=true]:[&_svg]:text-white transition-colors text-[0.9em] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>svg]:text-sky-400"
                 >
                   <BarChart3 className="size-5 shrink-0" strokeWidth={2} />
-                  <span className="text-sm font-medium tracking-tight">Dashboard</span>
+                  <span className="text-xs font-medium tracking-tight">Dashboard</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -136,7 +136,7 @@ export function AppSidebar({
                   className="h-11 px-3 rounded-none text-white hover:text-white hover:[&_svg]:text-white bg-transparent border-none hover:bg-transparent data-[active=true]:bg-[#424242] data-[active=true]:text-white data-[active=true]:outline-none data-[active=true]:[&_svg]:text-white transition-colors text-[0.9em] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>svg]:text-green-400"
                 >
                   <Package className="size-5 shrink-0" strokeWidth={2} />
-                  <span className="text-sm font-medium tracking-tight">Productos</span>
+                  <span className="text-xs font-medium tracking-tight">Productos</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -147,7 +147,7 @@ export function AppSidebar({
                   className="h-11 px-3 rounded-none text-white hover:text-white hover:[&_svg]:text-white bg-transparent border-none hover:bg-transparent data-[active=true]:bg-[#424242] data-[active=true]:text-white data-[active=true]:outline-none data-[active=true]:[&_svg]:text-white transition-colors text-[0.9em] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>svg]:text-violet-400"
                 >
                   <Store className="size-5 shrink-0" strokeWidth={2} />
-                  <span className="text-sm font-medium tracking-tight">Stock</span>
+                  <span className="text-xs font-medium tracking-tight">Stock</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -368,7 +368,7 @@ export function AppSidebar({
       <SidebarFooter className="border-t border-zinc-700/50 p-3 bg-[#2c2c2c]">
         <SidebarMenu>
           <SidebarMenuItem>
-            <div className="flex items-center gap-3 px-3 py-2 text-sm rounded-none text-white group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:gap-0">
+            <div className="flex items-center gap-3 px-3 py-2 text-xs rounded-none text-white group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:gap-0">
               <UserCircle className="size-5 shrink-0" />
               <span className="truncate font-medium group-data-[collapsible=icon]:hidden">{userEmail || "Usuario"}</span>
             </div>

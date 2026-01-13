@@ -2778,37 +2778,35 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {orders
-                        // Aplicar filtros a los pedidos
-                        .filter((order) => {
-                          const clientName = clients.find((c) => c.id === order.client_id)?.name || ""
-                          const matchesClient =
-                            orderFilters.cliente === "all" ||
-                            clientName.toLowerCase().includes(orderFilters.cliente.toLowerCase())
-                          const matchesVendor =
-                            orderFilters.vendedor === "all" || order.vendor === orderFilters.vendedor
-                          const matchesEstado = orderFilters.estado === "all" || order.status === orderFilters.estado
-                          const matchesFechaInicio =
-                            !orderFilters.fechaInicio || order.order_date >= orderFilters.fechaInicio
-                          const matchesFechaFin = !orderFilters.fechaFin || order.order_date <= orderFilters.fechaFin
-
-                          return (
-                            matchesClient && matchesVendor && matchesEstado && matchesFechaInicio && matchesFechaFin
-                          )
-                        })
-                        .sort((a, b) => new Date(a.order_date).getTime() - new Date(b.order_date).getTime())
-                        .map((order, idx) => {
+                      {(() => {
+                        const filtered = orders
+                          .filter((order) => {
+                            const clientName = clients.find((c) => c.id === order.client_id)?.name || ""
+                            const matchesClient =
+                              orderFilters.cliente === "all" ||
+                              clientName.toLowerCase().includes(orderFilters.cliente.toLowerCase())
+                            const matchesVendor =
+                              orderFilters.vendedor === "all" || order.vendor === orderFilters.vendedor
+                            const matchesEstado = orderFilters.estado === "all" || order.status === orderFilters.estado
+                            const matchesFechaInicio =
+                              !orderFilters.fechaInicio || order.order_date >= orderFilters.fechaInicio
+                            const matchesFechaFin = !orderFilters.fechaFin || order.order_date <= orderFilters.fechaFin
+                            return (
+                              matchesClient && matchesVendor && matchesEstado && matchesFechaInicio && matchesFechaFin
+                            )
+                          })
+                          .sort((a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime())
+                        return filtered.map((order, idx) => {
                           const clientName =
                             clients.find((c) => c.id === order.client_id)?.name || "Cliente desconocido"
                           const hasMultipleItems = (order.items?.length || 0) > 1
-
+                          const displayNumber = filtered.length - idx
                           return (
                             <>
                               <TableRow key={order.id}>
-                                <TableCell className="font-medium">#{idx + 1}</TableCell>
+                                <TableCell className="font-medium">#{displayNumber}</TableCell>
                                 <TableCell className="hidden md:table-cell">{formatDate(order.order_date)}</TableCell>
                                 <TableCell>{clientName}</TableCell>
-                                {/* Mostrar nombre del vendedor */}
                                 <TableCell>
                                   <Badge variant="outline" className="text-xs">
                                     {order.vendor || "Sin vendedor"}
@@ -2887,12 +2885,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                                 <TableCell>
                                   {!isReadOnly && (
                                     <div className="flex gap-2">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => editOrder(order)}
-                                        title="Editar pedido"
-                                      >
+                                      <Button variant="ghost" size="sm" onClick={() => editOrder(order)} title="Editar pedido">
                                         <Edit className="w-3 h-3" />
                                       </Button>
                                       <Button
@@ -2968,7 +2961,8 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                               )}
                             </>
                           )
-                        })}
+                        })
+                      })()}
                       {orders.filter((order) => {
                         const clientName = clients.find((c) => c.id === order.client_id)?.name || ""
                         const matchesClient =
