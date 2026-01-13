@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef, Suspense } from "react"
+import { useState, useEffect, useRef, Suspense, useCallback } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { logout } from "@/lib/auth"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
@@ -2134,11 +2134,9 @@ ${csvRows
     }
   }
 
-  const updateCurrentMonthExpenses = (amount: number) => {
-    console.log("💰 Updating current month expenses to:", amount)
+  const updateCurrentMonthExpenses = useCallback((amount: number) => {
     setCurrentMonthExpenses(amount)
-    loadData()
-  }
+  }, [])
 
   const getSKUStats = () => {
     const skuCounts: { [key: string]: number } = {}
