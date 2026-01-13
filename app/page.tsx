@@ -371,7 +371,21 @@ function InventoryManagementContent() {
     }
   }, [searchParams])
 
-  const loadData = async () => {
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const currentPath = window.location.pathname || "/"
+      const currentParams = new URLSearchParams(window.location.search)
+      if (currentParams.get("tab") !== activeTab) {
+        const newUrl = `${currentPath}?tab=${activeTab}`
+        router.replace(newUrl)
+      }
+    }
+  }, [activeTab, router])
+
+  const loadData = async (scope: string = "inventory") => {
+    if (scope !== "inventory") {
+      return
+    }
     if (!isSupabaseConfigured) {
       // Cargar datos base para modo offline
       setSuppliers([
@@ -524,7 +538,7 @@ function InventoryManagementContent() {
     const interval = setInterval(async () => {
       if (isSupabaseConfigured && isAuthenticated) {
         try {
-          await loadData()
+          await loadData(activeTab)
           setLastSync(new Date())
           setIsOnline(true)
         } catch (error) {
@@ -554,7 +568,7 @@ function InventoryManagementContent() {
       setIsAuthenticated(!!user)
       setIsLoading(false)
       if (user) {
-        await loadData()
+        await loadData(activeTab)
         setLastSync(new Date())
         startAutoRefresh() // Iniciar sincronización automática
         // Log de inicio de sistema
@@ -573,7 +587,7 @@ function InventoryManagementContent() {
     const handleOnline = () => {
       setIsOnline(true)
       if (isAuthenticated) {
-        loadData()
+        loadData(activeTab)
         startAutoRefresh()
       }
     }
@@ -592,6 +606,13 @@ function InventoryManagementContent() {
     }
   }, [isAuthenticated])
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      stopAutoRefresh()
+      startAutoRefresh()
+    }
+  }, [activeTab, isAuthenticated])
+
   const handleLoginSuccess = () => {
     setIsAuthenticated(true)
     // Check for login param and remove it
@@ -601,7 +622,7 @@ function InventoryManagementContent() {
     if (loginParam && redirectParam) {
       router.push(redirectParam)
     } else {
-      loadData().then(() => {
+      loadData(activeTab).then(() => {
         setLastSync(new Date())
         startAutoRefresh()
       })
