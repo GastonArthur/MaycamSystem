@@ -97,6 +97,7 @@ type WholesaleOrder = {
   order_date: string
   status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled"
   is_paid: boolean
+  collection_status?: "to_collect" | "collected"
   total_amount: number
   items: WholesaleOrderItem[]
   notes: string
@@ -207,6 +208,11 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
   const [viewingClient, setViewingClient] = useState<WholesaleClient | null>(null)
   const [expandedOrders, setExpandedOrders] = useState<number[]>([])
   const [vendors, setVendors] = useState<{ id: number; name: string }[]>([])
+
+  const totalPorCobrarBase = orders
+    .filter((o) => o.collection_status === "to_collect")
+    .reduce((sum, o) => sum + (o.total_amount || 0), 0)
+  const totalPorCobrarFaltante = totalPorCobrarBase * 0.05
   const [newVendor, setNewVendor] = useState("")
   const [showVendorDialog, setShowVendorDialog] = useState(false)
   const [editingVendor, setEditingVendor] = useState<{ id: number; name: string } | null>(null)
@@ -1141,6 +1147,7 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
             order_date: orderDate,
             status: "pending",
             is_paid: false,
+            collection_status: "to_collect",
             total_amount: totalAmount,
             items: orderItems,
             notes: orderNotes,
@@ -1239,6 +1246,46 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
       toast({
         title: "Estado de pago actualizado (Offline)",
         description: `El pedido #${orderId} ha sido marcado como ${isPaid ? "Pagado" : "No Pagado"}`,
+      })
+    }
+  }
+
+  const updateOrderCollectionStatus = async (orderId: number, status: "to_collect" | "collected") => {
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, collection_status: status } : o)))
+
+    if (isSupabaseConfigured) {
+      try {
+        const { error } = await supabase
+          .from("wholesale_orders")
+          .update({ collection_status: status })
+          .eq("id", orderId)
+
+        if (error) throw error
+
+        toast({
+          title: "Estado de cobro actualizado",
+          description: `El pedido #${orderId} ha sido marcado como ${status === "collected" ? "Cobrado" : "Por Cobrar"}`,
+        })
+      } catch (error: any) {
+        logError("Error updating order collection status:", error)
+        const errorMessage = error?.message || ""
+        let description = "No se pudo actualizar el estado de cobro en la base de datos"
+        if (errorMessage.includes("column") && errorMessage.includes("collection_status")) {
+          description =
+            "Falta la columna 'collection_status' en la base de datos. Agregue esta columna en 'wholesale_orders' para persistir el estado."
+        }
+        toast({
+          title: "Error",
+          description,
+          variant: "destructive",
+          duration: 10000,
+        })
+        loadWholesaleData()
+      }
+    } else {
+      toast({
+        title: "Estado de cobro actualizado (Offline)",
+        description: `El pedido #${orderId} ha sido marcado como ${status === "collected" ? "Cobrado" : "Por Cobrar"}`,
       })
     }
   }
@@ -2753,9 +2800,16 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                   setOrderFilters({ cliente: "all", vendedor: "all", estado: "all", fechaInicio: "", fechaFin: "" })
                 }
               >
-                <Filter className="w-4 h-4 mr-2" />
-                Limpiar filtros
+              <Filter className="w-4 h-4 mr-2" />
+              Limpiar filtros
               </Button>
+            </div>
+
+            <div className="mt-4">
+              <div className="rounded-lg bg-blue-600 text-white p-4">
+                <div className="text-sm">Total a cobrar faltante</div>
+                <div className="text-2xl font-bold">{formatCurrency(totalPorCobrarFaltante)}</div>
+              </div>
             </div>
 
             <Card>
@@ -2771,6 +2825,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                         <TableHead>Vendedor</TableHead>
                         <TableHead>Estado</TableHead>
                         <TableHead>Pagado</TableHead>
+                        <TableHead>Cobrado</TableHead>
                         <TableHead className="text-right">Total</TableHead>
                         <TableHead className="hidden md:table-cell">Notas</TableHead>
                         <TableHead className="hidden md:table-cell">Items</TableHead>
@@ -2853,6 +2908,25 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                                       </DropdownMenuItem>
                                       <DropdownMenuItem onClick={() => updateOrderPaymentStatus(order.id, false)}>
                                         NO
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </TableCell>
+                                <TableCell>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger disabled={isReadOnly} className="focus:outline-none">
+                                      <Badge
+                                        className={`cursor-pointer border-0 ${order.collection_status === "collected" ? "bg-green-600 hover:bg-green-700" : "bg-orange-500 hover:bg-orange-600"} text-white`}
+                                      >
+                                        {order.collection_status === "collected" ? "Cobrado" : "Por Cobrar"}
+                                      </Badge>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                      <DropdownMenuItem onClick={() => updateOrderCollectionStatus(order.id, "to_collect")}>
+                                        Por Cobrar
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => updateOrderCollectionStatus(order.id, "collected")}>
+                                        Cobrado
                                       </DropdownMenuItem>
                                     </DropdownMenuContent>
                                   </DropdownMenu>

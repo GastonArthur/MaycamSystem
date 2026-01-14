@@ -261,6 +261,8 @@ CREATE TABLE IF NOT EXISTS wholesale_orders (
     order_date TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     status TEXT CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')) DEFAULT 'pending',
     is_paid BOOLEAN DEFAULT FALSE,
+    collection_status TEXT DEFAULT 'to_collect',
+    CONSTRAINT wholesale_orders_collection_status_chk CHECK (collection_status IN ('to_collect','collected')),
     total_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
     notes TEXT,
     created_by INTEGER REFERENCES users(id),
@@ -270,6 +272,17 @@ CREATE TABLE IF NOT EXISTS wholesale_orders (
 
 -- Ensure is_paid column exists (for updates)
 ALTER TABLE wholesale_orders ADD COLUMN IF NOT EXISTS is_paid BOOLEAN DEFAULT FALSE;
+ALTER TABLE wholesale_orders ADD COLUMN IF NOT EXISTS collection_status TEXT DEFAULT 'to_collect';
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'wholesale_orders_collection_status_chk'
+  ) THEN
+    ALTER TABLE wholesale_orders ADD CONSTRAINT wholesale_orders_collection_status_chk CHECK (collection_status IN ('to_collect','collected'));
+  END IF;
+END $$;
+UPDATE wholesale_orders SET collection_status = COALESCE(collection_status, 'to_collect');
+CREATE INDEX IF NOT EXISTS idx_wholesale_orders_collection_status ON wholesale_orders(collection_status);
 
 CREATE TABLE IF NOT EXISTS wholesale_order_items (
     id SERIAL PRIMARY KEY,
