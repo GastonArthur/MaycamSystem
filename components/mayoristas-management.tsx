@@ -1395,7 +1395,7 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
     const toPdfText = (value: string) => value.replace(/\s+/g, " ").trim()
 
     const escapePdfString = (value: string) =>
-      toPdfText(value).replace(/\\/g, "\\\\").replace(/$$/g, "$$").replace(/$$/g, "$$")
+      toPdfText(value).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)")
 
     const wrapText = (text: string, maxChars: number) => {
       const clean = toPdfText(text)
@@ -1476,9 +1476,9 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
     }
 
     const cols = [
-      { name: "SKU", x: marginLeft, width: 80, align: "left" as const },
-      { name: "Producto/s", x: marginLeft + 80, width: 315, align: "left" as const },
-      { name: "Cantidad", x: marginLeft + 395, width: 80, align: "right" as const },
+      { name: "SKU", x: marginLeft, width: 80, align: "center" as const },
+      { name: "Producto/s", x: marginLeft + 80, width: 315, align: "center" as const },
+      { name: "Cantidad", x: marginLeft + 395, width: 80, align: "center" as const },
       { name: "U. medida", x: marginLeft + 475, width: 80, align: "center" as const },
     ]
 
@@ -1559,23 +1559,37 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
 
       const textY = y - 10
 
-      currentPageContent += pushText([item.sku], cols[0].x + 2, textY, "F1", 8)
+      const getDrawX = (col: any) => {
+        if (col.align === "right") return col.x + col.width - 2
+        if (col.align === "center") return col.x + col.width / 2
+        return col.x + 2
+      }
+
+      currentPageContent += pushText([item.sku], getDrawX(cols[0]), textY, "F1", 8, "0 0 0", cols[0].align)
 
       const nameLines = wrapText(description, 52)
       for (let i = 0; i < nameLines.length; i++) {
-        currentPageContent += pushText([nameLines[i]], cols[1].x + 2, textY - i * 10, "F1", 8)
+        currentPageContent += pushText(
+          [nameLines[i]],
+          getDrawX(cols[1]),
+          textY - i * 10,
+          "F1",
+          8,
+          "0 0 0",
+          cols[1].align,
+        )
       }
 
       currentPageContent += pushText(
         [toPdfText(String(qty))],
-        cols[2].x + cols[2].width - 2,
+        getDrawX(cols[2]),
         textY,
         "F1",
         8,
         "0 0 0",
-        "right",
+        cols[2].align,
       )
-      currentPageContent += pushText(["unidades"], cols[3].x + cols[3].width / 2, textY, "F1", 8, "0 0 0", "center")
+      currentPageContent += pushText(["unidades"], getDrawX(cols[3]), textY, "F1", 8, "0 0 0", cols[3].align)
 
       y -= rowHeight
     }
