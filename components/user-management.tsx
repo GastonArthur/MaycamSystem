@@ -1,5 +1,7 @@
 "use client"
 
+import { DialogTrigger } from "@/components/ui/dialog"
+
 import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
@@ -9,15 +11,13 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Switch } from "@/components/ui/switch"
-import { UserPlus, Edit, Trash2, Shield, RefreshCw, Eye, EyeOff } from "lucide-react"
+import { UserPlus, Edit, Trash2, Shield, RefreshCw, Settings } from "lucide-react"
 import { getUsers, createUser, updateUser, deleteUser, getCurrentUser, type User } from "@/lib/auth"
 import { toast } from "@/hooks/use-toast"
 import { logError } from "@/lib/logger"
+import { Checkbox } from "@/components/ui/checkbox"
 
-interface UserManagementProps {
-  // Removed props
-}
+type UserManagementProps = {}
 
 export function UserManagement() {
   const [users, setUsers] = useState<User[]>([])
@@ -30,6 +30,21 @@ export function UserManagement() {
     role: "user" as "admin" | "user" | "viewer",
     can_view_logs: false,
     can_view_wholesale: false,
+    can_view_dashboard: true,
+    can_view_products: true,
+    can_view_stock: true,
+    can_view_precios: true,
+    can_view_zentor: true,
+    can_view_clients: true,
+    can_view_brands: true,
+    can_view_suppliers: true,
+    can_view_wholesale_bullpadel: true,
+    can_view_retail: true,
+    can_view_rentabilidad: true,
+    can_view_gastos: true,
+    can_view_compras: true,
+    can_view_notas_credito: true,
+    can_view_users: true,
   })
 
   const [editingUser, setEditingUser] = useState<User | null>(null)
@@ -87,6 +102,21 @@ export function UserManagement() {
           role: "user",
           can_view_logs: false,
           can_view_wholesale: false,
+          can_view_dashboard: true,
+          can_view_products: true,
+          can_view_stock: true,
+          can_view_precios: true,
+          can_view_zentor: true,
+          can_view_clients: true,
+          can_view_brands: true,
+          can_view_suppliers: true,
+          can_view_wholesale_bullpadel: true,
+          can_view_retail: true,
+          can_view_rentabilidad: true,
+          can_view_gastos: true,
+          can_view_compras: true,
+          can_view_notas_credito: true,
+          can_view_users: true,
         })
         setShowCreateForm(false)
         loadUsers() // Recargar la lista
@@ -211,277 +241,249 @@ export function UserManagement() {
 
       <div className="space-y-4">
         {/* Botones de acción */}
-          <div className="flex gap-4 items-center">
-            <Button
-              onClick={() => setShowCreateForm(true)}
-              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-            >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Crear Usuario
-            </Button>
-            <Button onClick={loadUsers} variant="outline" size="sm" disabled={loading}>
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-              Actualizar
-            </Button>
-            <div className="text-sm text-gray-500">Total de usuarios: {users.length}</div>
-          </div>
+        <div className="flex gap-4 items-center">
+          <Button
+            onClick={() => setShowCreateForm(true)}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            Crear Usuario
+          </Button>
+          <Button onClick={loadUsers} variant="outline" size="sm" disabled={loading}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Actualizar
+          </Button>
+          <div className="text-sm text-gray-500">Total de usuarios: {users.length}</div>
+        </div>
 
-          {/* Tabla de usuarios */}
-          <ScrollArea className="h-[500px]">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead className="hidden md:table-cell">Email</TableHead>
-                  <TableHead>Rol</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="hidden md:table-cell">Ver Logs</TableHead>
-                  <TableHead className="hidden md:table-cell">Ver Mayoristas</TableHead>
-                  <TableHead className="hidden md:table-cell">Fecha Creación</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">
-                      {editingUser?.id === user.id ? (
-                        <Input
-                          value={editingUser.name}
-                          onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
-                          className="w-full"
-                        />
-                      ) : (
-                        user.name
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {editingUser?.id === user.id ? (
-                        <Input
-                          type="email"
-                          value={editingUser.email}
-                          onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                          className="w-full"
-                        />
-                      ) : (
-                        user.email
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingUser?.id === user.id ? (
-                        <Select
-                          value={editingUser.role}
-                          onValueChange={(value: "admin" | "user" | "viewer") =>
-                            setEditingUser({ ...editingUser, role: value })
-                          }
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="viewer">Solo Lectura</SelectItem>
-                            <SelectItem value="user">Usuario</SelectItem>
-                            <SelectItem value="admin">Administrador</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Badge variant="outline" className={getRoleColor(user.role)}>
-                          {getRoleLabel(user.role)}
+        {/* Tabla de usuarios */}
+        <ScrollArea className="h-[500px]">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nombre</TableHead>
+                <TableHead className="hidden md:table-cell">Email</TableHead>
+                <TableHead>Rol</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="hidden md:table-cell">Permisos</TableHead>
+                <TableHead className="hidden md:table-cell">Fecha Creación</TableHead>
+                <TableHead>Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">
+                    {editingUser?.id === user.id ? (
+                      <Input
+                        value={editingUser.name}
+                        onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                        className="w-full"
+                      />
+                    ) : (
+                      user.name
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {editingUser?.id === user.id ? (
+                      <Input
+                        type="email"
+                        value={editingUser.email}
+                        onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                        className="w-full"
+                      />
+                    ) : (
+                      user.email
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingUser?.id === user.id ? (
+                      <Select
+                        value={editingUser.role}
+                        onValueChange={(value: "admin" | "user" | "viewer") =>
+                          setEditingUser({ ...editingUser, role: value })
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="viewer">Solo Lectura</SelectItem>
+                          <SelectItem value="user">Usuario</SelectItem>
+                          <SelectItem value="admin">Administrador</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Badge variant="outline" className={getRoleColor(user.role)}>
+                        {getRoleLabel(user.role)}
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {editingUser?.id === user.id ? (
+                      <Select
+                        value={editingUser.is_active ? "active" : "inactive"}
+                        onValueChange={(value) => setEditingUser({ ...editingUser, is_active: value === "active" })}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Activo</SelectItem>
+                          <SelectItem value="inactive">Inactivo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Badge variant={user.is_active ? "default" : "secondary"}>
+                          {user.is_active ? "Activo" : "Inactivo"}
                         </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingUser?.id === user.id ? (
-                        <Select
-                          value={editingUser.is_active ? "active" : "inactive"}
-                          onValueChange={(value) => setEditingUser({ ...editingUser, is_active: value === "active" })}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="active">Activo</SelectItem>
-                            <SelectItem value="inactive">Inactivo</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Badge variant={user.is_active ? "default" : "secondary"}>
-                            {user.is_active ? "Activo" : "Inactivo"}
-                          </Badge>
-                          {user.id !== currentUser?.id && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => toggleUserStatus(user.id, user.is_active)}
-                              className={`h-6 px-2 text-xs ${
-                                user.is_active
-                                  ? "text-orange-600 hover:bg-orange-100"
-                                  : "text-green-600 hover:bg-green-100"
-                              }`}
-                            >
-                              {user.is_active ? "Desactivar" : "Activar"}
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {editingUser?.id === user.id ? (
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            checked={editingUser.can_view_logs}
-                            onCheckedChange={(checked) => setEditingUser({ ...editingUser, can_view_logs: checked })}
-                          />
-                          <Label className="text-sm">{editingUser.can_view_logs ? "Sí" : "No"}</Label>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1">
-                            {user.can_view_logs ? (
-                              <Eye className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <EyeOff className="w-4 h-4 text-gray-400" />
-                            )}
-                            <Badge variant={user.can_view_logs ? "default" : "secondary"} className="text-xs">
-                              {user.can_view_logs ? "Sí" : "No"}
-                            </Badge>
-                          </div>
-                          {user.id !== currentUser?.id && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => toggleLogsAccess(user.id, user.can_view_logs)}
-                              className={`h-6 px-2 text-xs ${
-                                user.can_view_logs
-                                  ? "text-red-600 hover:bg-red-100"
-                                  : "text-green-600 hover:bg-green-100"
-                              }`}
-                            >
-                              {user.can_view_logs ? "Quitar" : "Dar"}
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {editingUser?.id === user.id ? (
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            checked={editingUser.can_view_wholesale}
-                            onCheckedChange={(checked) =>
-                              setEditingUser({ ...editingUser, can_view_wholesale: checked })
-                            }
-                          />
-                          <Label className="text-sm">{editingUser.can_view_wholesale ? "Sí" : "No"}</Label>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1">
-                            {user.can_view_wholesale ? (
-                              <Eye className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <EyeOff className="w-4 h-4 text-gray-400" />
-                            )}
-                            <Badge variant={user.can_view_wholesale ? "default" : "secondary"} className="text-xs">
-                              {user.can_view_wholesale ? "Sí" : "No"}
-                            </Badge>
-                          </div>
-                          {user.id !== currentUser?.id && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => toggleWholesaleAccess(user.id, user.can_view_wholesale)}
-                              className={`h-6 px-2 text-xs ${
-                                user.can_view_wholesale
-                                  ? "text-red-600 hover:bg-red-100"
-                                  : "text-green-600 hover:bg-green-100"
-                              }`}
-                            >
-                              {user.can_view_wholesale ? "Quitar" : "Dar"}
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {new Date(user.created_at).toLocaleDateString("es-ES", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {editingUser?.id === user.id ? (
-                          <>
-                            <Button
-                              size="sm"
-                              onClick={() => handleUpdateUser(user.id, editingUser)}
-                              className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700 text-white"
-                            >
-                              Guardar
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => setEditingUser(null)}
-                              className="h-8 px-3 text-xs text-gray-600 hover:bg-gray-100"
-                            >
-                              Cancelar
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            {user.id !== currentUser?.id && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => setEditingUser(user)}
-                                  className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-100"
-                                >
-                                  <Edit className="w-3 h-3" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => setDeleteConfirm({ show: true, user })}
-                                  className="h-8 w-8 p-0 text-red-600 hover:bg-red-100"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </>
-                            )}
-                            {user.id === currentUser?.id && (
-                              <Badge variant="outline" className="text-xs">
-                                Tú
-                              </Badge>
-                            )}
-                          </>
+                        {user.id !== currentUser?.id && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => toggleUserStatus(user.id, user.is_active)}
+                            className={`h-6 px-2 text-xs ${
+                              user.is_active
+                                ? "text-orange-600 hover:bg-orange-100"
+                                : "text-green-600 hover:bg-green-100"
+                            }`}
+                          >
+                            {user.is_active ? "Desactivar" : "Activar"}
+                          </Button>
                         )}
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {users.length === 0 && !loading && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                      No hay usuarios registrados
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-        </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <Settings className="w-3 h-3 mr-1" />
+                          Configurar
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Permisos de {user.name}</DialogTitle>
+                          <DialogDescription>Configura los permisos de acceso a cada sección</DialogDescription>
+                        </DialogHeader>
+                        <div className="grid grid-cols-2 gap-4 py-4">
+                          {[
+                            { key: "can_view_dashboard", label: "Dashboard" },
+                            { key: "can_view_products", label: "Productos" },
+                            { key: "can_view_stock", label: "Stock" },
+                            { key: "can_view_precios", label: "Precios a Publicar" },
+                            { key: "can_view_zentor", label: "Lista ZENTOR" },
+                            { key: "can_view_clients", label: "Clientes" },
+                            { key: "can_view_brands", label: "Marcas" },
+                            { key: "can_view_suppliers", label: "Proveedores" },
+                            { key: "can_view_wholesale", label: "Mayoristas" },
+                            { key: "can_view_wholesale_bullpadel", label: "Mayoristas Bullpadel" },
+                            { key: "can_view_retail", label: "Minoristas" },
+                            { key: "can_view_rentabilidad", label: "Rentabilidad Real" },
+                            { key: "can_view_gastos", label: "Gastos" },
+                            { key: "can_view_compras", label: "Compras" },
+                            { key: "can_view_notas_credito", label: "Notas de Crédito" },
+                            { key: "can_view_logs", label: "Ver Logs" },
+                            { key: "can_view_users", label: "Gestionar Usuarios" },
+                          ].map((perm) => (
+                            <div key={perm.key} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`${user.id}-${perm.key}`}
+                                checked={(user as any)[perm.key] ?? true}
+                                onCheckedChange={(checked) => {
+                                  handleUpdateUser(user.id, { [perm.key]: checked })
+                                }}
+                              />
+                              <Label htmlFor={`${user.id}-${perm.key}`} className="text-sm cursor-pointer">
+                                {perm.label}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </TableCell>
+                  {/* </CHANGE> */}
+                  <TableCell className="hidden md:table-cell">
+                    {new Date(user.created_at).toLocaleDateString("es-ES", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      {editingUser?.id === user.id ? (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => handleUpdateUser(user.id, editingUser)}
+                            className="h-8 px-3 text-xs bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            Guardar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setEditingUser(null)}
+                            className="h-8 px-3 text-xs text-gray-600 hover:bg-gray-100"
+                          >
+                            Cancelar
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          {user.id !== currentUser?.id && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setEditingUser(user)}
+                                className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-100"
+                              >
+                                <Edit className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setDeleteConfirm({ show: true, user })}
+                                className="h-8 w-8 p-0 text-red-600 hover:bg-red-100"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </>
+                          )}
+                          {user.id === currentUser?.id && (
+                            <Badge variant="outline" className="text-xs">
+                              Tú
+                            </Badge>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {users.length === 0 && !loading && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                    No hay usuarios registrados
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </ScrollArea>
+      </div>
 
       {/* Modal para crear usuario */}
       <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Crear Nuevo Usuario</DialogTitle>
-            <DialogDescription>Complete la información del nuevo usuario</DialogDescription>
+            <DialogDescription>Complete la información del nuevo usuario y configure sus permisos</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -518,13 +520,34 @@ export function UserManagement() {
               <Select
                 value={newUser.role}
                 onValueChange={(value: "admin" | "user" | "viewer") => {
-                  setNewUser({
-                    ...newUser,
-                    role: value,
-                    // Auto-asignar acceso a logs y mayoristas si es admin
-                    can_view_logs: value === "admin" ? true : newUser.can_view_logs,
-                    can_view_wholesale: value === "admin" ? true : newUser.can_view_wholesale,
-                  })
+                  if (value === "admin") {
+                    setNewUser({
+                      ...newUser,
+                      role: value,
+                      can_view_logs: true,
+                      can_view_wholesale: true,
+                      can_view_dashboard: true,
+                      can_view_products: true,
+                      can_view_stock: true,
+                      can_view_precios: true,
+                      can_view_zentor: true,
+                      can_view_clients: true,
+                      can_view_brands: true,
+                      can_view_suppliers: true,
+                      can_view_wholesale_bullpadel: true,
+                      can_view_retail: true,
+                      can_view_rentabilidad: true,
+                      can_view_gastos: true,
+                      can_view_compras: true,
+                      can_view_notas_credito: true,
+                      can_view_users: true,
+                    })
+                  } else {
+                    setNewUser({
+                      ...newUser,
+                      role: value,
+                    })
+                  }
                 }}
               >
                 <SelectTrigger>
@@ -537,29 +560,45 @@ export function UserManagement() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="newUserCanViewLogs"
-                checked={newUser.can_view_logs}
-                onCheckedChange={(checked) => setNewUser({ ...newUser, can_view_logs: checked })}
-              />
-              <Label htmlFor="newUserCanViewLogs" className="text-sm font-medium">
-                Puede ver logs de actividad
-              </Label>
+            <div className="border-t pt-4">
+              <Label className="text-sm font-semibold mb-3 block">Permisos de Acceso</Label>
+              <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto">
+                {[
+                  { key: "can_view_dashboard", label: "Dashboard" },
+                  { key: "can_view_products", label: "Productos" },
+                  { key: "can_view_stock", label: "Stock" },
+                  { key: "can_view_precios", label: "Precios a Publicar" },
+                  { key: "can_view_zentor", label: "Lista ZENTOR" },
+                  { key: "can_view_clients", label: "Clientes" },
+                  { key: "can_view_brands", label: "Marcas" },
+                  { key: "can_view_suppliers", label: "Proveedores" },
+                  { key: "can_view_wholesale", label: "Mayoristas" },
+                  { key: "can_view_wholesale_bullpadel", label: "Mayoristas Bullpadel" },
+                  { key: "can_view_retail", label: "Minoristas" },
+                  { key: "can_view_rentabilidad", label: "Rentabilidad Real" },
+                  { key: "can_view_gastos", label: "Gastos" },
+                  { key: "can_view_compras", label: "Compras" },
+                  { key: "can_view_notas_credito", label: "Notas de Crédito" },
+                  { key: "can_view_logs", label: "Ver Logs" },
+                  { key: "can_view_users", label: "Gestionar Usuarios" },
+                ].map((perm) => (
+                  <div key={perm.key} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`new-${perm.key}`}
+                      checked={(newUser as any)[perm.key] ?? true}
+                      onCheckedChange={(checked) => setNewUser({ ...newUser, [perm.key]: checked })}
+                    />
+                    <Label htmlFor={`new-${perm.key}`} className="text-xs cursor-pointer">
+                      {perm.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="newUserCanViewWholesale"
-                checked={newUser.can_view_wholesale}
-                onCheckedChange={(checked) => setNewUser({ ...newUser, can_view_wholesale: checked })}
-              />
-              <Label htmlFor="newUserCanViewWholesale" className="text-sm font-medium">
-                Puede acceder a Ventas Mayoristas
-              </Label>
-            </div>
+            {/* </CHANGE> */}
             {newUser.role === "admin" && (
               <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                💡 Los administradores tienen acceso a logs y mayoristas por defecto
+                💡 Los administradores tienen acceso a todas las secciones por defecto
               </div>
             )}
           </div>

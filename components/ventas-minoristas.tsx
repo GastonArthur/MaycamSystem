@@ -4,29 +4,26 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   ShoppingBag,
   Users,
   Plus,
   Edit,
   Search,
-  Download,
   Trash2,
   CheckCircle,
   XCircle,
-  Calendar,
   ChevronDown,
   ChevronUp,
+  Filter,
 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import { toast } from "@/hooks/use-toast"
-import { getCurrentUser, hasPermission, logActivity } from "@/lib/auth"
+import { getCurrentUser, logActivity } from "@/lib/auth"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { logError } from "@/lib/logger"
 
@@ -509,7 +506,7 @@ export function VentasMinoristas({ inventory }: VentasMinoristasProps) {
             <ShoppingBag className="w-5 h-5 text-green-600" />
             Minoristas
           </CardTitle>
-          <CardDescription>Gestión de ventas minoristas y clientes</CardDescription>
+          <CardDescription>Gestión completa de ventas minoristas, clientes y seguimiento de pedidos</CardDescription>
         </CardHeader>
       </Card>
       {/* </CHANGE> */}
@@ -528,7 +525,7 @@ export function VentasMinoristas({ inventory }: VentasMinoristasProps) {
 
         <div className="flex-1 overflow-y-auto bg-gray-50/50 p-6">
           <TabsContent value="ventas" className="m-0 space-y-6">
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <Card className="bg-emerald-600 text-white">
                 <CardContent className="p-4">
                   <p className="text-emerald-100 text-sm">Total Ventas</p>
@@ -553,47 +550,51 @@ export function VentasMinoristas({ inventory }: VentasMinoristasProps) {
                   <p className="text-2xl font-bold">{deliveredSales}</p>
                 </CardContent>
               </Card>
-              <Card className="bg-orange-500 text-white">
-                <CardContent className="p-4">
-                  <p className="text-orange-100 text-sm">Stock Pendiente</p>
-                  <p className="text-2xl font-bold">{pendingStock}</p>
-                </CardContent>
-              </Card>
             </div>
+            {/* </CHANGE> */}
 
             <div className="flex justify-between items-center gap-4">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                <Input placeholder="Buscar por cliente, ID o SKU..." className="pl-9" />
+              <div className="bg-white p-2.5 rounded-lg border shadow-sm flex items-center gap-2.5 flex-1 max-w-2xl">
+                <div className="flex items-center gap-2 text-emerald-600 border-r border-gray-200 pr-3">
+                  <Filter className="w-3.5 h-3.5" />
+                  <span className="text-xs font-medium">Filtros</span>
+                </div>
+
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-gray-400" />
+                  <Input placeholder="Buscar cliente, ID o SKU..." className="pl-7 h-8 text-xs" />
+                </div>
+
+                <Select defaultValue="todos">
+                  <SelectTrigger className="h-8 text-xs w-[110px]">
+                    <SelectValue placeholder="Pago" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="pagado">Pagados</SelectItem>
+                    <SelectItem value="pendiente">Pendientes</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select defaultValue="todos">
+                  <SelectTrigger className="h-8 text-xs w-[110px]">
+                    <SelectValue placeholder="Entrega" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="entregado">Entregados</SelectItem>
+                    <SelectItem value="pendiente">Pendientes</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="gap-2 text-green-600 border-green-600 hover:bg-green-50 bg-transparent"
-                  onClick={() => {
-                    if (!hasPermission("EXPORT")) {
-                      toast({
-                        title: "Sin permisos",
-                        description: "No tiene permisos para exportar datos",
-                        variant: "destructive",
-                      })
-                      return
-                    }
-                    // Logic for export would go here
-                    toast({ title: "Exportar", description: "Funcionalidad de exportación en desarrollo" })
-                  }}
-                >
-                  <Download className="w-4 h-4" /> Exportar Excel
+              {/* </CHANGE> */}
+
+              {!isReadOnly && (
+                <Button onClick={() => setShowNewSaleForm(true)} className="bg-green-600 hover:bg-green-700 h-9">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nueva Venta
                 </Button>
-                {!isReadOnly && (
-                  <Button
-                    className="gap-2 bg-emerald-600 hover:bg-emerald-700"
-                    onClick={() => setShowNewSaleForm(true)}
-                  >
-                    <Plus className="w-4 h-4" /> Nueva Venta
-                  </Button>
-                )}
-              </div>
+              )}
             </div>
 
             <Card>
@@ -823,39 +824,28 @@ export function VentasMinoristas({ inventory }: VentasMinoristasProps) {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {!isReadOnly && (
-                            <div className="flex gap-2">
+                          <div className="flex gap-2">
+                            {!isReadOnly && (
                               <Button
-                                variant="outline"
+                                variant="ghost"
                                 size="sm"
-                                className="gap-2 bg-transparent"
-                                onClick={() => {
-                                  setEditingClient(client)
-                                  setNewClientData({
-                                    name: client.name,
-                                    dni_cuit: client.dni_cuit || "",
-                                    email: client.email || "",
-                                    phone: client.phone || "",
-                                    province: client.province || "",
-                                    city: client.city || "",
-                                    zip_code: client.zip_code || "",
-                                    address: client.address || "",
-                                  })
-                                  setShowClientForm(true)
-                                }}
+                                onClick={() => setEditingClient(client)}
+                                title="Editar cliente"
                               >
-                                <Edit className="w-4 h-4" /> Editar
+                                <Edit className="w-4 h-4" />
                               </Button>
+                            )}
+                            {!isReadOnly && (
                               <Button
-                                variant="destructive"
+                                variant="ghost"
                                 size="sm"
-                                className="gap-2"
                                 onClick={() => handleDeleteClient(client)}
+                                title="Eliminar cliente"
                               >
-                                <Trash2 className="w-4 h-4" /> Eliminar
+                                <Trash2 className="w-4 h-4 text-red-500" />
                               </Button>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -866,441 +856,6 @@ export function VentasMinoristas({ inventory }: VentasMinoristasProps) {
           </TabsContent>
         </div>
       </Tabs>
-
-      {showNewSaleForm && (
-        <Dialog open={showNewSaleForm} onOpenChange={setShowNewSaleForm}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Registrar Venta</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-6 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Fecha de Venta *</Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                    <Input
-                      type="date"
-                      className="pl-9"
-                      value={newSaleDate}
-                      onChange={(e) => setNewSaleDate(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Cliente *</Label>
-                  <div className="flex gap-2">
-                    <Select
-                      value={newSaleClientId ? String(newSaleClientId) : ""}
-                      onValueChange={(val) => {
-                        const id = Number.parseInt(val)
-                        setNewSaleClientId(id)
-                        const c = clients.find((x) => x.id === id)
-                        setNewSaleClient(c ? c.name : "")
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar cliente..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clients.map((c) => (
-                          <SelectItem key={c.id} value={String(c.id)}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button variant="outline" size="icon" onClick={() => setShowClientForm(true)} title="Nuevo Cliente">
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border p-4 rounded-md bg-gray-50">
-                <h4 className="font-medium mb-2">Agregar Producto</h4>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label>SKU</Label>
-                      <Input
-                        value={currentSku}
-                        onChange={(e) => setCurrentSku(e.target.value)}
-                        placeholder="SKU"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") addItemToSale()
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <Label>Cantidad</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={currentQuantity}
-                        onChange={(e) => setCurrentQuantity(Number.parseInt(e.target.value) || 1)}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Nombre</Label>
-                    <Input
-                      value={currentDescription}
-                      onChange={(e) => setCurrentDescription(e.target.value)}
-                      placeholder="Nombre del producto"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Precio Unitario</Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={currentUnitPrice}
-                        onChange={(e) => setCurrentUnitPrice(Number.parseFloat(e.target.value) || 0)}
-                        className="pl-7"
-                      />
-                    </div>
-                  </div>
-
-                  <Button type="button" onClick={addItemToSale} className="w-full bg-emerald-600 hover:bg-emerald-700">
-                    <Plus className="w-4 h-4 mr-2" /> Agregar a la Venta
-                  </Button>
-                </div>
-              </div>
-
-              <Card>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Producto</TableHead>
-                        <TableHead className="w-[100px]">Cant.</TableHead>
-                        <TableHead className="w-[120px] text-right">Precio Unit.</TableHead>
-                        <TableHead className="w-[120px] text-right">Total</TableHead>
-                        <TableHead className="w-[50px]"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {newSaleItems.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center text-gray-500 py-8">
-                            No hay productos agregados
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        newSaleItems.map((item, index) => (
-                          <TableRow key={index}>
-                            <TableCell>
-                              <div className="font-medium">{item.description}</div>
-                              <div className="text-xs text-gray-500">{item.sku}</div>
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                className="h-8"
-                                value={item.quantity}
-                                onChange={(e) => {
-                                  const qty = Number.parseInt(e.target.value) || 0
-                                  const newItems = [...newSaleItems]
-                                  newItems[index].quantity = qty
-                                  newItems[index].total_price = qty * item.unit_price
-                                  setNewSaleItems(newItems)
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell className="text-right">{formatCurrency(item.unit_price)}</TableCell>
-                            <TableCell className="text-right font-bold">{formatCurrency(item.total_price)}</TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-red-500"
-                                onClick={() => {
-                                  setNewSaleItems(newSaleItems.filter((_, i) => i !== index))
-                                }}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>% Descuento (opcional)</Label>
-                  <Input
-                    type="number"
-                    value={discount}
-                    onChange={(e) => setDiscount(Number.parseFloat(e.target.value) || 0)}
-                  />
-                  <p className="text-xs text-gray-500">Se aplica sobre el subtotal</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Costo de Envío (opcional)</Label>
-                  <Input
-                    type="number"
-                    value={shippingCost}
-                    onChange={(e) => setShippingCost(Number.parseFloat(e.target.value) || 0)}
-                  />
-                  <p className="text-xs text-gray-500">Se suma al total</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Método de Envío</Label>
-                  <Select value={shippingMethod} onValueChange={setShippingMethod}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="correo">Correo Argentino</SelectItem>
-                      <SelectItem value="andreani">Andreani</SelectItem>
-                      <SelectItem value="moto">Moto Mensajería</SelectItem>
-                      <SelectItem value="retiro">Retiro en Local</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                <div className="flex justify-between">
-                  <span>Subtotal productos:</span>
-                  <span>{formatCurrency(subtotal)}</span>
-                </div>
-                {discount > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Descuento ({discount}%):</span>
-                    <span>-{formatCurrency(subtotal * (discount / 100))}</span>
-                  </div>
-                )}
-                {shippingCost > 0 && (
-                  <div className="flex justify-between text-blue-600">
-                    <span>Envío:</span>
-                    <span>+{formatCurrency(shippingCost)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-xl font-bold pt-2 border-t">
-                  <span>TOTAL FINAL:</span>
-                  <span className="text-emerald-600">{formatCurrency(total)}</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Estado de Stock</Label>
-                  <Select value={stockStatus} onValueChange={setStockStatus}>
-                    <SelectTrigger className={stockStatus === "restado" ? "text-green-600" : "text-orange-600"}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="restado">✓ Stock Restado</SelectItem>
-                      <SelectItem value="pendiente">⚠ Restar Stock</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>¿Pagó?</Label>
-                  <Select value={paymentStatus} onValueChange={setPaymentStatus}>
-                    <SelectTrigger className={paymentStatus === "pagado" ? "text-green-600" : "text-red-600"}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pagado">SÍ</SelectItem>
-                      <SelectItem value="no_pagado">NO</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>¿Entregado/Enviado?</Label>
-                  <Select value={deliveryStatus} onValueChange={setDeliveryStatus}>
-                    <SelectTrigger className={deliveryStatus === "entregado" ? "text-green-600" : "text-red-600"}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="entregado">SÍ</SelectItem>
-                      <SelectItem value="no_entregado">NO</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Notas (opcional)</Label>
-                <Input
-                  placeholder="Observaciones adicionales..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={() => setShowNewSaleForm(false)}>
-                  Cancelar
-                </Button>
-                <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={handleRegisterSale}>
-                  Registrar Venta
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-      {showClientForm && (
-        <Dialog open={showClientForm} onOpenChange={setShowClientForm}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Nuevo Cliente Minorista</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nombre *</Label>
-                  <Input
-                    value={newClientData.name}
-                    onChange={(e) => setNewClientData((prev) => ({ ...prev, name: e.target.value }))}
-                    placeholder="Nombre completo"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>DNI o CUIT</Label>
-                  <Input
-                    value={newClientData.dni_cuit}
-                    onChange={(e) => setNewClientData((prev) => ({ ...prev, dni_cuit: e.target.value }))}
-                    placeholder="DNI o CUIT"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input
-                    value={newClientData.email}
-                    onChange={(e) => setNewClientData((prev) => ({ ...prev, email: e.target.value }))}
-                    placeholder="ejemplo@email.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Teléfono</Label>
-                  <Input
-                    value={newClientData.phone}
-                    onChange={(e) => setNewClientData((prev) => ({ ...prev, phone: e.target.value }))}
-                    placeholder="Número de teléfono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Provincia</Label>
-                  <Input
-                    value={newClientData.province}
-                    onChange={(e) => setNewClientData((prev) => ({ ...prev, province: e.target.value }))}
-                    placeholder="Provincia"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Localidad</Label>
-                  <Input
-                    value={newClientData.city}
-                    onChange={(e) => setNewClientData((prev) => ({ ...prev, city: e.target.value }))}
-                    placeholder="Localidad"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>C. Postal</Label>
-                  <Input
-                    value={newClientData.zip_code}
-                    onChange={(e) => setNewClientData((prev) => ({ ...prev, zip_code: e.target.value }))}
-                    placeholder="CP"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Dirección</Label>
-                <Input
-                  value={newClientData.address}
-                  onChange={(e) => setNewClientData((prev) => ({ ...prev, address: e.target.value }))}
-                  placeholder="Dirección completa"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setShowClientForm(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={handleCreateClient} className="bg-emerald-600 hover:bg-emerald-700">
-                  {editingClient ? "Guardar Cambios" : "Crear Cliente"}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-      {viewingClient && (
-        <Dialog open={!!viewingClient} onOpenChange={(open) => !open && setViewingClient(null)}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Información del Cliente</DialogTitle>
-              <DialogDescription>Detalles completos del cliente minorista</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs text-gray-500">Nombre</Label>
-                  <div className="font-medium">{viewingClient.name}</div>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500">DNI/CUIT</Label>
-                  <div className="font-medium">{viewingClient.dni_cuit || "-"}</div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs text-gray-500">Email</Label>
-                  <div className="font-medium truncate" title={viewingClient.email}>
-                    {viewingClient.email || "-"}
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500">Teléfono</Label>
-                  <div className="font-medium">{viewingClient.phone || "-"}</div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs text-gray-500">Provincia</Label>
-                  <div className="font-medium">{viewingClient.province || "-"}</div>
-                </div>
-                <div>
-                  <Label className="text-xs text-gray-500">Ciudad</Label>
-                  <div className="font-medium">{viewingClient.city || "-"}</div>
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs text-gray-500">Dirección</Label>
-                <div className="font-medium">{viewingClient.address || "-"}</div>
-              </div>
-              <div>
-                <Label className="text-xs text-gray-500">Código Postal</Label>
-                <div className="font-medium">{viewingClient.zip_code || "-"}</div>
-              </div>
-              <div className="flex justify-end pt-4">
-                <Button onClick={() => setViewingClient(null)}>Cerrar</Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   )
 }

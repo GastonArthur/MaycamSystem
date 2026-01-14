@@ -11,6 +11,21 @@ export type User = {
   is_active: boolean
   can_view_logs: boolean
   can_view_wholesale: boolean
+  can_view_dashboard: boolean
+  can_view_products: boolean
+  can_view_stock: boolean
+  can_view_precios: boolean
+  can_view_zentor: boolean
+  can_view_clients: boolean
+  can_view_brands: boolean
+  can_view_suppliers: boolean
+  can_view_wholesale_bullpadel: boolean
+  can_view_retail: boolean
+  can_view_rentabilidad: boolean
+  can_view_gastos: boolean
+  can_view_compras: boolean
+  can_view_notas_credito: boolean
+  can_view_users: boolean
   created_at: string
   password_hash?: string
   two_factor_enabled?: boolean
@@ -46,6 +61,21 @@ const ADMIN_USER: User = {
   is_active: true,
   can_view_logs: true,
   can_view_wholesale: true,
+  can_view_dashboard: true,
+  can_view_products: true,
+  can_view_stock: true,
+  can_view_precios: true,
+  can_view_zentor: true,
+  can_view_clients: true,
+  can_view_brands: true,
+  can_view_suppliers: true,
+  can_view_wholesale_bullpadel: true,
+  can_view_retail: true,
+  can_view_rentabilidad: true,
+  can_view_gastos: true,
+  can_view_compras: true,
+  can_view_notas_credito: true,
+  can_view_users: true,
   created_at: new Date().toISOString(),
 }
 
@@ -136,7 +166,7 @@ export const login = async (
     // Verificar contraseña con bcrypt
     // Si el usuario tiene hash en DB, usarlo. Si no (usuarios legacy), intentar passwordMap (opcional, o forzar reset)
     let isValidPassword = false
-    
+
     if (user.password_hash) {
       isValidPassword = await compare(password, user.password_hash)
     } else {
@@ -155,7 +185,7 @@ export const login = async (
 
     // 2FA Check
     if (user.two_factor_enabled) {
-      if (user.two_factor_method === 'sms' || user.two_factor_method === 'email') {
+      if (user.two_factor_method === "sms" || user.two_factor_method === "email") {
         const code = Math.floor(100000 + Math.random() * 900000).toString()
         const expires = new Date()
         expires.setMinutes(expires.getMinutes() + 10)
@@ -171,9 +201,16 @@ export const login = async (
         // En un entorno real, aquí se llamaría al servicio de SMS/Email
         // Por ahora, simulamos el envío en logs del servidor (visible en consola)
         console.log(`🔐 [2FA] Código para ${user.email} (${user.two_factor_method}): ${code}`)
-        
+
         // También registramos en logs de actividad para depuración
-        await logActivity("2FA_CODE_SENT", "users", user.id, null, null, `Código 2FA enviado vía ${user.two_factor_method}`)
+        await logActivity(
+          "2FA_CODE_SENT",
+          "users",
+          user.id,
+          null,
+          null,
+          `Código 2FA enviado vía ${user.two_factor_method}`,
+        )
       }
 
       return { success: true, require2FA: true, userId: user.id }
@@ -202,7 +239,7 @@ export const login = async (
     currentUser = user
     localStorage.setItem("session_token", sessionToken)
 
-    if (typeof document !== 'undefined') {
+    if (typeof document !== "undefined") {
       const cookieExpires = new Date(Date.now() + 24 * 60 * 60 * 1000).toUTCString()
       document.cookie = `session_token=${sessionToken}; expires=${cookieExpires}; path=/; SameSite=Lax`
     }
@@ -218,14 +255,10 @@ export const login = async (
 
 export const verify2FALogin = async (
   userId: number,
-  token: string
+  token: string,
 ): Promise<{ success: boolean; user?: User; error?: string }> => {
   try {
-    const { data: user, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", userId)
-      .single()
+    const { data: user, error } = await supabase.from("users").select("*").eq("id", userId).single()
 
     if (error || !user) {
       return { success: false, error: "Usuario no encontrado" }
@@ -233,25 +266,28 @@ export const verify2FALogin = async (
 
     let isValid = false
 
-    if (user.two_factor_method === 'sms' || user.two_factor_method === 'email') {
+    if (user.two_factor_method === "sms" || user.two_factor_method === "email") {
       if (!user.two_factor_code || !user.two_factor_expires) {
         return { success: false, error: "Código no generado o expirado" }
       }
-      
+
       const now = new Date()
       const expires = new Date(user.two_factor_expires)
-      
+
       if (now > expires) {
         return { success: false, error: "El código ha expirado" }
       }
-      
+
       if (token === user.two_factor_code) {
         isValid = true
         // Limpiar código usado
-        await supabase.from("users").update({ 
-          two_factor_code: null, 
-          two_factor_expires: null 
-        }).eq("id", user.id)
+        await supabase
+          .from("users")
+          .update({
+            two_factor_code: null,
+            two_factor_expires: null,
+          })
+          .eq("id", user.id)
       }
     } else {
       // Default: Google Authenticator (TOTP)
@@ -283,8 +319,8 @@ export const verify2FALogin = async (
 
     currentUser = user
     localStorage.setItem("session_token", sessionToken)
-    
-    if (typeof document !== 'undefined') {
+
+    if (typeof document !== "undefined") {
       const cookieExpires = new Date(Date.now() + 24 * 60 * 60 * 1000).toUTCString()
       document.cookie = `session_token=${sessionToken}; expires=${cookieExpires}; path=/; SameSite=Lax`
     }
@@ -318,7 +354,7 @@ export const logout = async (): Promise<void> => {
 
       // Limpiar almacenamiento local y cookie
       localStorage.removeItem("session_token")
-      if (typeof document !== 'undefined') {
+      if (typeof document !== "undefined") {
         document.cookie = "session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/"
       }
     }
@@ -328,7 +364,7 @@ export const logout = async (): Promise<void> => {
     logError("Error en logout:", error)
     // Limpiar localmente aunque haya error
     localStorage.removeItem("session_token")
-    if (typeof document !== 'undefined') {
+    if (typeof document !== "undefined") {
       document.cookie = "session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/"
     }
     currentUser = null
@@ -381,11 +417,11 @@ export const checkSession = async (): Promise<User | null> => {
     }
 
     currentUser = Array.isArray(session.users) ? session.users[0] : session.users
-    
+
     // Ensure cookie is synchronized with localStorage
-    if (typeof document !== 'undefined' && !document.cookie.includes(`session_token=${sessionToken}`)) {
-       const cookieExpires = new Date(session.expires_at).toUTCString()
-       document.cookie = `session_token=${sessionToken}; expires=${cookieExpires}; path=/; SameSite=Lax`
+    if (typeof document !== "undefined" && !document.cookie.includes(`session_token=${sessionToken}`)) {
+      const cookieExpires = new Date(session.expires_at).toUTCString()
+      document.cookie = `session_token=${sessionToken}; expires=${cookieExpires}; path=/; SameSite=Lax`
     }
 
     // @ts-ignore
@@ -474,7 +510,9 @@ export const getActivityLogs = async (limit = 100): Promise<ActivityLog[]> => {
   try {
     let query = supabase
       .from("activity_logs")
-      .select("id, user_id, user_email, user_name, action, table_name, record_id, description, created_at, old_data, new_data, ip_address, user_agent")
+      .select(
+        "id, user_id, user_email, user_name, action, table_name, record_id, description, created_at, old_data, new_data, ip_address, user_agent",
+      )
       .order("created_at", { ascending: false })
       .limit(Math.min(limit, 500)) // Limitar para mejor rendimiento
 
@@ -508,12 +546,12 @@ export const clearAllLogs = async (): Promise<{ success: boolean; error?: string
   try {
     // Eliminar todos los logs (usando una condición que siempre sea verdadera)
     const { error } = await supabase.from("activity_logs").delete().gt("id", -1)
-    
+
     if (error) throw error
-    
+
     // Registrar esta acción (será el primer nuevo log)
     await logActivity("CLEAR_LOGS", null, null, null, null, "Todos los logs han sido eliminados")
-    
+
     return { success: true }
   } catch (error) {
     logError("Error eliminando logs:", error)
@@ -562,6 +600,21 @@ export const createUser = async (userData: {
       is_active: true,
       can_view_logs: userData.can_view_logs ?? userData.role === "admin",
       can_view_wholesale: userData.can_view_wholesale ?? userData.role === "admin",
+      can_view_dashboard: true,
+      can_view_products: true,
+      can_view_stock: true,
+      can_view_precios: true,
+      can_view_zentor: true,
+      can_view_clients: true,
+      can_view_brands: true,
+      can_view_suppliers: true,
+      can_view_wholesale_bullpadel: true,
+      can_view_retail: true,
+      can_view_rentabilidad: true,
+      can_view_gastos: true,
+      can_view_compras: true,
+      can_view_notas_credito: true,
+      can_view_users: true,
       created_at: new Date().toISOString(),
     }
     OFFLINE_USERS.push(newUser)
@@ -583,6 +636,21 @@ export const createUser = async (userData: {
           role: userData.role,
           can_view_logs: userData.can_view_logs ?? userData.role === "admin",
           can_view_wholesale: userData.can_view_wholesale ?? userData.role === "admin",
+          can_view_dashboard: true,
+          can_view_products: true,
+          can_view_stock: true,
+          can_view_precios: true,
+          can_view_zentor: true,
+          can_view_clients: true,
+          can_view_brands: true,
+          can_view_suppliers: true,
+          can_view_wholesale_bullpadel: true,
+          can_view_retail: true,
+          can_view_rentabilidad: true,
+          can_view_gastos: true,
+          can_view_compras: true,
+          can_view_notas_credito: true,
+          can_view_users: true,
           created_by: getCurrentUser()?.id,
         },
       ])
@@ -615,7 +683,7 @@ export const updateUser = async (
     }
 
     const oldUser = { ...OFFLINE_USERS[userIndex] }
-    let updatedUser = { ...OFFLINE_USERS[userIndex], ...updates }
+    const updatedUser = { ...OFFLINE_USERS[userIndex], ...updates }
 
     if (updates.password) {
       // En modo offline, guardamos el hash
@@ -628,7 +696,7 @@ export const updateUser = async (
         console.error("Error hashing password offline", e)
       }
     }
-    
+
     // Eliminar password plano de updates para evitar que se guarde si User lo tuviera
     delete (updatedUser as any).password
 
@@ -659,6 +727,21 @@ export const updateUser = async (
       is_active: updates.is_active,
       can_view_logs: updates.can_view_logs,
       can_view_wholesale: updates.can_view_wholesale,
+      can_view_dashboard: updates.can_view_dashboard,
+      can_view_products: updates.can_view_products,
+      can_view_stock: updates.can_view_stock,
+      can_view_precios: updates.can_view_precios,
+      can_view_zentor: updates.can_view_zentor,
+      can_view_clients: updates.can_view_clients,
+      can_view_brands: updates.can_view_brands,
+      can_view_suppliers: updates.can_view_suppliers,
+      can_view_wholesale_bullpadel: updates.can_view_wholesale_bullpadel,
+      can_view_retail: updates.can_view_retail,
+      can_view_rentabilidad: updates.can_view_rentabilidad,
+      can_view_gastos: updates.can_view_gastos,
+      can_view_compras: updates.can_view_compras,
+      can_view_notas_credito: updates.can_view_notas_credito,
+      can_view_users: updates.can_view_users,
       updated_by: getCurrentUser()?.id,
     }
 
@@ -667,10 +750,7 @@ export const updateUser = async (
       updateData.password_hash = hashedPassword
     }
 
-    const { error } = await supabase
-      .from("users")
-      .update(updateData)
-      .eq("id", userId)
+    const { error } = await supabase.from("users").update(updateData).eq("id", userId)
 
     if (error) throw error
 
@@ -784,6 +864,81 @@ export const hasPermission = (action: string): boolean => {
     return user.can_view_wholesale || false
   }
 
+  // Verificar permisos específicos para dashboard
+  if (action === "VIEW_DASHBOARD") {
+    return user.can_view_dashboard ?? true
+  }
+
+  // Verificar permisos específicos para productos
+  if (action === "VIEW_PRODUCTS") {
+    return user.can_view_products ?? true
+  }
+
+  // Verificar permisos específicos para stock
+  if (action === "VIEW_STOCK") {
+    return user.can_view_stock ?? true
+  }
+
+  // Verificar permisos específicos para precios
+  if (action === "VIEW_PRECIOS") {
+    return user.can_view_precios ?? true
+  }
+
+  // Verificar permisos específicos para zentor
+  if (action === "VIEW_ZENTOR") {
+    return user.can_view_zentor ?? true
+  }
+
+  // Verificar permisos específicos para clientes
+  if (action === "VIEW_CLIENTS") {
+    return user.can_view_clients ?? true
+  }
+
+  // Verificar permisos específicos para marcas
+  if (action === "VIEW_BRANDS") {
+    return user.can_view_brands ?? true
+  }
+
+  // Verificar permisos específicos para proveedores
+  if (action === "VIEW_SUPPLIERS") {
+    return user.can_view_suppliers ?? true
+  }
+
+  // Verificar permisos específicos para wholesale bullpadel
+  if (action === "VIEW_WHOLESALE_BULLPADEL") {
+    return user.can_view_wholesale_bullpadel ?? true
+  }
+
+  // Verificar permisos específicos para retail
+  if (action === "VIEW_RETAIL") {
+    return user.can_view_retail ?? true
+  }
+
+  // Verificar permisos específicos para rentabilidad
+  if (action === "VIEW_RENTABILIDAD") {
+    return user.can_view_rentabilidad ?? true
+  }
+
+  // Verificar permisos específicos para gastos
+  if (action === "VIEW_GASTOS") {
+    return user.can_view_gastos ?? true
+  }
+
+  // Verificar permisos específicos para compras
+  if (action === "VIEW_COMPRAS") {
+    return user.can_view_compras ?? true
+  }
+
+  // Verificar permisos específicos para notas de crédito
+  if (action === "VIEW_NOTAS_CREDITO") {
+    return user.can_view_notas_credito ?? true
+  }
+
+  // Verificar permisos específicos para usuarios
+  if (action === "VIEW_USERS") {
+    return user.can_view_users ?? true
+  }
+
   switch (user.role) {
     case "admin":
       return true
@@ -875,6 +1030,21 @@ export const initializeSystem = async (adminData: {
         is_active: true,
         can_view_logs: true,
         can_view_wholesale: true,
+        can_view_dashboard: true,
+        can_view_products: true,
+        can_view_stock: true,
+        can_view_precios: true,
+        can_view_zentor: true,
+        can_view_clients: true,
+        can_view_brands: true,
+        can_view_suppliers: true,
+        can_view_wholesale_bullpadel: true,
+        can_view_retail: true,
+        can_view_rentabilidad: true,
+        can_view_gastos: true,
+        can_view_compras: true,
+        can_view_notas_credito: true,
+        can_view_users: true,
         created_at: new Date().toISOString(),
       },
     ]
@@ -896,6 +1066,21 @@ export const initializeSystem = async (adminData: {
           role: "admin",
           can_view_logs: true,
           can_view_wholesale: true,
+          can_view_dashboard: true,
+          can_view_products: true,
+          can_view_stock: true,
+          can_view_precios: true,
+          can_view_zentor: true,
+          can_view_clients: true,
+          can_view_brands: true,
+          can_view_suppliers: true,
+          can_view_wholesale_bullpadel: true,
+          can_view_retail: true,
+          can_view_rentabilidad: true,
+          can_view_gastos: true,
+          can_view_compras: true,
+          can_view_notas_credito: true,
+          can_view_users: true,
           is_active: true,
         },
       ])
