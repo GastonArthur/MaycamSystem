@@ -2837,7 +2837,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
               </Button>
             </div>
 
-            <div className="mt-4 flex flex-col items-start">
+            <div className="mt-4 flex items-center justify-between">
               <div className="rounded-xl bg-blue-600 text-white px-4 py-3 h-20 w-72 flex flex-col justify-center gap-1">
                 <div className="flex items-baseline justify-between">
                   <span className="text-sm font-medium">A cobrar</span>
@@ -2849,7 +2849,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                 </div>
               </div>
               {!isReadOnly && (
-                <Button onClick={() => setShowOrderForm(true)} className="bg-purple-600 hover:bg-purple-700 mt-3">
+                <Button onClick={() => setShowOrderForm(true)} className="bg-purple-600 hover:bg-purple-700">
                   <Plus className="w-4 h-4 mr-2" />
                   Nuevo Pedido
                 </Button>
