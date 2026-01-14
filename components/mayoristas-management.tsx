@@ -220,9 +220,11 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
 
   // Estados para filtros de pedidos
   const [orderFilters, setOrderFilters] = useState({
-    cliente: "all",
-    vendedor: "all",
-    estado: "all",
+    cliente: "",
+    vendedor: "",
+    estado: "",
+    pagado: "",
+    cobrado: "",
     fechaInicio: "",
     fechaFin: "",
   })
@@ -2719,12 +2721,6 @@ Este reporte contiene información confidencial y está destinado únicamente pa
           <TabsContent value="pedidos" className="space-y-4 h-[calc(95vh-200px)] overflow-y-auto">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold">Pedidos Mayoristas</h3>
-              {!isReadOnly && (
-                <Button onClick={() => setShowOrderForm(true)} className="bg-purple-600 hover:bg-purple-700">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nuevo Pedido
-                </Button>
-              )}
             </div>
 
             {/* Filtros exhaustivos para pedidos */}
@@ -2740,14 +2736,14 @@ Este reporte contiene información confidencial y está destinado únicamente pa
               </div>
 
               <Select
-                value={orderFilters.vendedor}
+                value={orderFilters.vendedor || undefined}
                 onValueChange={(val) => setOrderFilters((prev) => ({ ...prev, vendedor: val }))}
               >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Vendedor" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos los vendedores</SelectItem>
+                  <SelectItem value="">Todos los vendedores</SelectItem>
                   {vendors.map((vendor) => (
                     <SelectItem key={vendor.id} value={vendor.name}>
                       {vendor.name}
@@ -2757,19 +2753,47 @@ Este reporte contiene información confidencial y está destinado únicamente pa
               </Select>
 
               <Select
-                value={orderFilters.estado}
+                value={orderFilters.estado || undefined}
                 onValueChange={(val) => setOrderFilters((prev) => ({ ...prev, estado: val }))}
               >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos los estados</SelectItem>
+                  <SelectItem value="">Todos los estados</SelectItem>
                   <SelectItem value="pending">Pendiente</SelectItem>
                   <SelectItem value="confirmed">Confirmado</SelectItem>
                   <SelectItem value="shipped">Enviado</SelectItem>
                   <SelectItem value="delivered">Entregado</SelectItem>
                   <SelectItem value="cancelled">Cancelado</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={orderFilters.pagado || undefined}
+                onValueChange={(val) => setOrderFilters((prev) => ({ ...prev, pagado: val }))}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Pagado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="pagado">Pagado</SelectItem>
+                  <SelectItem value="no_pagado">No Pagado</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={orderFilters.cobrado || undefined}
+                onValueChange={(val) => setOrderFilters((prev) => ({ ...prev, cobrado: val }))}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Cobrado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="cobrado">Cobrado</SelectItem>
+                  <SelectItem value="por_cobrar">Por Cobrar</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -2797,7 +2821,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                 variant="ghost"
                 size="sm"
                 onClick={() =>
-                  setOrderFilters({ cliente: "all", vendedor: "all", estado: "all", fechaInicio: "", fechaFin: "" })
+                  setOrderFilters({ cliente: "", vendedor: "", estado: "", pagado: "", cobrado: "", fechaInicio: "", fechaFin: "" })
                 }
               >
               <Filter className="w-4 h-4 mr-2" />
@@ -2805,11 +2829,25 @@ Este reporte contiene información confidencial y está destinado únicamente pa
               </Button>
             </div>
 
-            <div className="mt-4">
-              <div className="rounded-lg bg-blue-600 text-white p-4">
-                <div className="text-sm">Total a cobrar faltante</div>
-                <div className="text-2xl font-bold">{formatCurrency(totalPorCobrarFaltante)}</div>
+            <div className="mt-4 flex flex-col items-start">
+              <div className="rounded-xl bg-blue-600 text-white p-4 w-64 h-64 flex flex-col justify-between">
+                <div>
+                  <div className="text-sm">Total a cobrar faltante</div>
+                  <div className="text-2xl font-bold mt-1">{formatCurrency(totalPorCobrarFaltante)}</div>
+                </div>
+                <div className="text-xs space-y-1">
+                  <div>Total por cobrar: {formatCurrency(totalPorCobrarBase)}</div>
+                  <div>
+                    Cálculo: {formatCurrency(totalPorCobrarBase)} × 5% = {formatCurrency(totalPorCobrarFaltante)}
+                  </div>
+                </div>
               </div>
+              {!isReadOnly && (
+                <Button onClick={() => setShowOrderForm(true)} className="bg-purple-600 hover:bg-purple-700 mt-3">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nuevo Pedido
+                </Button>
+              )}
             </div>
 
             <Card>
@@ -2838,16 +2876,29 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                           .filter((order) => {
                             const clientName = clients.find((c) => c.id === order.client_id)?.name || ""
                             const matchesClient =
-                              orderFilters.cliente === "all" ||
+                              !orderFilters.cliente ||
                               clientName.toLowerCase().includes(orderFilters.cliente.toLowerCase())
-                            const matchesVendor =
-                              orderFilters.vendedor === "all" || order.vendor === orderFilters.vendedor
-                            const matchesEstado = orderFilters.estado === "all" || order.status === orderFilters.estado
+                            const matchesVendor = !orderFilters.vendedor || order.vendor === orderFilters.vendedor
+                            const matchesEstado = !orderFilters.estado || order.status === orderFilters.estado
+                            const matchesPagado =
+                              !orderFilters.pagado ||
+                              (orderFilters.pagado === "pagado" ? order.is_paid : !order.is_paid)
+                            const matchesCobrado =
+                              !orderFilters.cobrado ||
+                              (orderFilters.cobrado === "cobrado"
+                                ? order.collection_status === "collected"
+                                : order.collection_status === "to_collect")
                             const matchesFechaInicio =
                               !orderFilters.fechaInicio || order.order_date >= orderFilters.fechaInicio
                             const matchesFechaFin = !orderFilters.fechaFin || order.order_date <= orderFilters.fechaFin
                             return (
-                              matchesClient && matchesVendor && matchesEstado && matchesFechaInicio && matchesFechaFin
+                              matchesClient &&
+                              matchesVendor &&
+                              matchesEstado &&
+                              matchesPagado &&
+                              matchesCobrado &&
+                              matchesFechaInicio &&
+                              matchesFechaFin
                             )
                           })
                           .sort((a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime())
