@@ -225,25 +225,37 @@ export function UserManagement() {
     await handleUpdateUser(userId, { can_view_wholesale: !currentAccess })
   }
 
-  const handlePermissionChange = async (key: string, checked: boolean) => {
+  const handlePermissionChange = (key: string, checked: boolean) => {
+    if (!permissionsUser) return
+    setPermissionsUser((prev) => (prev ? { ...prev, [key]: checked } : null))
+  }
+
+  const savePermissions = async () => {
     if (!permissionsUser) return
 
-    setPermissionsUser((prev) => (prev ? { ...prev, [key]: checked } : null))
-    setUsers(users.map((u) => (u.id === permissionsUser.id ? { ...u, [key]: checked } : u)))
-
     try {
-      const result = await updateUser(permissionsUser.id, { [key]: checked })
-      if (!result.success) {
+      const result = await updateUser(permissionsUser.id, permissionsUser)
+      if (result.success) {
+        toast({
+          title: "Permisos actualizados",
+          description: "Los permisos se han guardado exitosamente",
+        })
+        setShowPermissionsDialog(false)
+        loadUsers()
+      } else {
         toast({
           title: "Error",
-          description: result.error || "Error al actualizar permiso",
+          description: result.error || "Error al actualizar permisos",
           variant: "destructive",
         })
-        loadUsers()
       }
     } catch (error) {
-      logError("Error updating permission:", error)
-      loadUsers()
+      logError("Error saving permissions:", error)
+      toast({
+        title: "Error",
+        description: "Error interno al guardar permisos",
+        variant: "destructive",
+      })
     }
   }
 
@@ -625,6 +637,14 @@ export function UserManagement() {
                   </Label>
                 </div>
               ))}
+          </div>
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button variant="secondary" onClick={() => setShowPermissionsDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={savePermissions}>
+              Guardar Cambios
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -83,6 +83,7 @@ import {
   ChevronsRight,
   ChevronDown,
   ChevronUp,
+  ShieldAlert,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
@@ -2764,7 +2765,17 @@ ${csvRows
               </div>
             </div>
 
-            {activeTab === "inventory" && (
+            {activeTab === "inventory" && !(getCurrentUser()?.can_view_dashboard ?? true) && (
+              <div className="flex flex-col items-center justify-center h-96 text-center p-8 bg-white rounded-lg shadow-sm border border-slate-200">
+                <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Restringido</h2>
+                <p className="text-gray-500 max-w-md">
+                  No tiene permisos para visualizar el Dashboard. Contacte al administrador si cree que esto es un error.
+                </p>
+              </div>
+            )}
+
+            {activeTab === "inventory" && (getCurrentUser()?.can_view_dashboard ?? true) && (
               <>
                 {/* Filtros de Dashboard */}
                 <div className="flex flex-wrap items-center gap-4 bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-6">
@@ -3990,11 +4001,21 @@ ${csvRows
                 </Card>
               </TabsContent>
               <TabsContent value="stock" className="space-y-6">
-                <StockList />
+                {(getCurrentUser()?.can_view_stock ?? true) ? (
+                  <StockList />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-96 text-center p-8 bg-white rounded-lg shadow-sm border border-slate-200">
+                    <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Restringido</h2>
+                    <p className="text-gray-500 max-w-md">
+                      No tiene permisos para visualizar el Stock.
+                    </p>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="import">
-                {hasPermission("IMPORT") ? (
+                {(getCurrentUser()?.can_view_products ?? true) ? (
                   <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
                     <CardHeader className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-t-lg">
                       <CardTitle className="flex items-center gap-2 text-emerald-800">
@@ -4096,7 +4117,8 @@ ${csvRows
               </TabsContent>
 
               <TabsContent value="suppliers">
-                <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+                {(getCurrentUser()?.can_view_suppliers ?? true) ? (
+                  <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
                   <CardHeader className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-t-lg">
                     <CardTitle className="flex items-center gap-2 text-orange-800">
                       <Building2 className="w-5 h-5" />
@@ -4275,10 +4297,20 @@ ${csvRows
                     </div>
                   </CardContent>
                 </Card>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-96 text-center p-8 bg-white rounded-lg shadow-sm border border-slate-200">
+                    <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Restringido</h2>
+                    <p className="text-gray-500 max-w-md">
+                      No tiene permisos para visualizar Proveedores.
+                    </p>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="brands">
-                <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+                {(getCurrentUser()?.can_view_brands ?? true) ? (
+                  <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
                   <CardHeader className="bg-gradient-to-r from-purple-50 to-violet-50 rounded-t-lg">
                     <CardTitle className="flex items-center gap-2 text-purple-800">
                       <Tag className="w-5 h-5" />
@@ -4449,6 +4481,15 @@ ${csvRows
                     </div>
                   </CardContent>
                 </Card>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-96 text-center p-8 bg-white rounded-lg shadow-sm border border-slate-200">
+                    <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Restringido</h2>
+                    <p className="text-gray-500 max-w-md">
+                      No tiene permisos para visualizar Marcas.
+                    </p>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="config">
@@ -4490,125 +4531,163 @@ ${csvRows
               </TabsContent>
 
               <TabsContent value="precios">
-                <PreciosPublicar
-                  inventory={inventory}
-                  suppliers={suppliers}
-                  brands={brands}
-                  cuotasConfig={cuotasConfig}
-                  onUpdateCuotasConfig={updateCuotasPercentages}
-                />
+                {(getCurrentUser()?.can_view_precios ?? true) ? (
+                  <PreciosPublicar
+                    inventory={inventory}
+                    suppliers={suppliers}
+                    brands={brands}
+                    cuotasConfig={cuotasConfig}
+                    onUpdateCuotasConfig={updateCuotasPercentages}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-96 text-center p-8 bg-white rounded-lg shadow-sm border border-slate-200">
+                    <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Restringido</h2>
+                    <p className="text-gray-500 max-w-md">No tiene permisos para visualizar Precios.</p>
+                  </div>
+                )}
               </TabsContent>
               <TabsContent value="zentor">
-                <ZentorList inventory={inventory} suppliers={suppliers} brands={brands} />
+                {(getCurrentUser()?.can_view_zentor ?? true) ? (
+                  <ZentorList inventory={inventory} suppliers={suppliers} brands={brands} />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-96 text-center p-8 bg-white rounded-lg shadow-sm border border-slate-200">
+                    <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Restringido</h2>
+                    <p className="text-gray-500 max-w-md">No tiene permisos para visualizar Zentor.</p>
+                  </div>
+                )}
               </TabsContent>
               <TabsContent value="wholesale">
-                {hasPermission("VIEW_WHOLESALE") && (
+                {(getCurrentUser()?.can_view_wholesale ?? true) ? (
                   <MayoristasManagement inventory={inventory} suppliers={suppliers} brands={brands} />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-96 text-center p-8 bg-white rounded-lg shadow-sm border border-slate-200">
+                    <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Restringido</h2>
+                    <p className="text-gray-500 max-w-md">No tiene permisos para visualizar Mayoristas.</p>
+                  </div>
                 )}
               </TabsContent>
 
               <TabsContent value="wholesale-bullpadel">
-                <div className="mb-4">
-                  <Card className="shadow-lg border-0 bg-gradient-to-r from-orange-500 to-amber-600 text-white">
-                    <CardHeader className="py-3">
-                      <CardTitle className="flex items-center gap-2">
-                        <ShoppingCart className="w-5 h-5" />
-                        Mayoristas Bullpadel
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                </div>
-                {hasPermission("VIEW_WHOLESALE") && (
+                {(getCurrentUser()?.can_view_wholesale_bullpadel ?? true) ? (
                   <MayoristasBullpadelManagement inventory={inventory} suppliers={suppliers} brands={brands} />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-96 text-center p-8 bg-white rounded-lg shadow-sm border border-slate-200">
+                    <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Restringido</h2>
+                    <p className="text-gray-500 max-w-md">No tiene permisos para visualizar Mayoristas Bullpadel.</p>
+                  </div>
                 )}
               </TabsContent>
 
               <TabsContent value="retail">
-                <div className="mb-4">
-                  <Card className="shadow-lg border-0 bg-gradient-to-r from-emerald-500 to-green-600 text-white">
-                    <CardHeader className="py-3">
-                      <CardTitle className="flex items-center gap-2">
-                        <ShoppingBag className="w-5 h-5" />
-                        Minoristas
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                </div>
-                <VentasMinoristas inventory={inventory} />
+                {(getCurrentUser()?.can_view_retail ?? true) ? (
+                  <VentasMinoristas inventory={inventory} />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-96 text-center p-8 bg-white rounded-lg shadow-sm border border-slate-200">
+                    <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Restringido</h2>
+                    <p className="text-gray-500 max-w-md">No tiene permisos para visualizar Ventas Minoristas.</p>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="purchases">
-                <div className="mb-4">
-                  <Card className="shadow-lg border-0 bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
-                    <CardHeader className="py-3">
-                      <CardTitle className="flex items-center gap-2">
-                        <Package className="w-5 h-5" />
-                        Compras
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                </div>
-                <ComprasManagement />
+                {(getCurrentUser()?.can_view_compras ?? true) ? (
+                  <ComprasManagement />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-96 text-center p-8 bg-white rounded-lg shadow-sm border border-slate-200">
+                    <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Restringido</h2>
+                    <p className="text-gray-500 max-w-md">No tiene permisos para visualizar Compras.</p>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="gastos">
-                <GastosManagement onUpdateExpenses={updateCurrentMonthExpenses} />
+                {(getCurrentUser()?.can_view_gastos ?? true) ? (
+                  <GastosManagement onUpdateExpenses={updateCurrentMonthExpenses} />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-96 text-center p-8 bg-white rounded-lg shadow-sm border border-slate-200">
+                    <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Restringido</h2>
+                    <p className="text-gray-500 max-w-md">No tiene permisos para visualizar Gastos.</p>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="notas-credito">
-                <div className="mb-4">
-                  <Card className="shadow-lg border-0 bg-gradient-to-r from-rose-500 to-red-600 text-white">
-                    <CardHeader className="py-3">
-                      <CardTitle className="flex items-center gap-2">
-                        <FileText className="w-5 h-5" />
-                        Notas de Crédito
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                </div>
-                <NotasCreditoManagement />
+                {(getCurrentUser()?.can_view_notas_credito ?? true) ? (
+                  <NotasCreditoManagement />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-96 text-center p-8 bg-white rounded-lg shadow-sm border border-slate-200">
+                    <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Restringido</h2>
+                    <p className="text-gray-500 max-w-md">No tiene permisos para visualizar Notas de Crédito.</p>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="clients">
-                <div className="mb-4">
-                  <Card className="shadow-lg border-0 bg-gradient-to-r from-sky-500 to-blue-600 text-white">
-                    <CardHeader className="py-3">
-                      <CardTitle className="flex items-center gap-2">
-                        <Users className="w-5 h-5" />
-                        Clientes
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                </div>
-                <ClientesManagement />
+                {(getCurrentUser()?.can_view_clients ?? true) ? (
+                  <ClientesManagement />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-96 text-center p-8 bg-white rounded-lg shadow-sm border border-slate-200">
+                    <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Restringido</h2>
+                    <p className="text-gray-500 max-w-md">No tiene permisos para visualizar Clientes.</p>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="logs">
-                <div className="mb-4">
-                  <Card className="shadow-lg border-0 bg-gradient-to-r from-slate-700 to-gray-800 text-white">
-                    <CardHeader className="py-3">
-                      <CardTitle className="flex items-center gap-2">
-                        <FileText className="w-5 h-5" />
-                        Registros de Actividad
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                </div>
-                <ActivityLogs />
+                {(getCurrentUser()?.can_view_logs ?? true) ? (
+                  <>
+                    <div className="mb-4">
+                      <Card className="shadow-lg border-0 bg-gradient-to-r from-slate-700 to-gray-800 text-white">
+                        <CardHeader className="py-3">
+                          <CardTitle className="flex items-center gap-2">
+                            <FileText className="w-5 h-5" />
+                            Registros de Actividad
+                          </CardTitle>
+                        </CardHeader>
+                      </Card>
+                    </div>
+                    <ActivityLogs />
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-96 text-center p-8 bg-white rounded-lg shadow-sm border border-slate-200">
+                    <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Restringido</h2>
+                    <p className="text-gray-500 max-w-md">No tiene permisos para visualizar Logs.</p>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="users">
-                <div className="mb-4">
-                  <Card className="shadow-lg border-0 bg-gradient-to-r from-violet-500 to-indigo-600 text-white">
-                    <CardHeader className="py-3">
-                      <CardTitle className="flex items-center gap-2">
-                        <UserCircle className="w-5 h-5" />
-                        Usuarios
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                </div>
-                <UserManagement />
+                {(getCurrentUser()?.can_view_users ?? true) ? (
+                  <>
+                    <div className="mb-4">
+                      <Card className="shadow-lg border-0 bg-gradient-to-r from-violet-500 to-indigo-600 text-white">
+                        <CardHeader className="py-3">
+                          <CardTitle className="flex items-center gap-2">
+                            <UserCircle className="w-5 h-5" />
+                            Usuarios
+                          </CardTitle>
+                        </CardHeader>
+                      </Card>
+                    </div>
+                    <UserManagement />
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-96 text-center p-8 bg-white rounded-lg shadow-sm border border-slate-200">
+                    <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Acceso Restringido</h2>
+                    <p className="text-gray-500 max-w-md">No tiene permisos para gestionar Usuarios.</p>
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
 

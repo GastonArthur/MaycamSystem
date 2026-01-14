@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Download, Filter, X, Search, Calendar, FileText, ChevronLeft, ChevronRight } from "lucide-react"
+import { Download, Filter, X, Search, Calendar, FileText, ChevronLeft, ChevronRight, Package } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { formatCurrency } from "@/lib/utils"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
@@ -297,6 +297,15 @@ export function ComprasManagement() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
+          <CardTitle className="flex items-center gap-2 text-blue-800">
+            <Package className="w-5 h-5 text-blue-600" />
+            Compras
+          </CardTitle>
+          <CardDescription>Gestión y seguimiento de compras a proveedores</CardDescription>
+        </CardHeader>
+      </Card>
       <div className="flex flex-col md:flex-row gap-6">
         {/* Left Sidebar: Calendar & Totals */}
         <div className="w-full md:w-80 space-y-4">

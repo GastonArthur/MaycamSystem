@@ -42,6 +42,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
+import { getCurrentUser } from "@/lib/auth"
 
 export type SidebarNavigationProps = {
   activeTab: string
@@ -63,6 +64,7 @@ export function AppSidebar({
 
   const { state, toggleSidebar } = useSidebar()
   const isCollapsed = state === "collapsed"
+  const currentUser = getCurrentUser()
 
   const handleNavigation = (tab: string) => {
     setActiveTab(tab)
@@ -117,39 +119,45 @@ export function AppSidebar({
         <SidebarGroup className="p-0">
           <SidebarGroupContent>
             <SidebarMenu className="gap-3 group-data-[collapsible=icon]:gap-1">
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={activeTab === "inventory"}
-                  onClick={() => handleNavigation("inventory")}
-                  tooltip="Dashboard"
-                  className="h-11 px-3 rounded-none text-white hover:text-white hover:[&_svg]:text-white bg-transparent border-none hover:bg-transparent data-[active=true]:bg-[#424242] data-[active=true]:text-white data-[active=true]:outline-none data-[active=true]:[&_svg]:text-white transition-colors text-[0.9em] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>svg]:text-sky-400"
-                >
-                  <BarChart3 className="size-5 shrink-0" strokeWidth={2} />
-                  <span className="text-xs font-medium tracking-tight">Dashboard</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={activeTab === "import"}
-                  onClick={() => handleNavigation("import")}
-                  tooltip="Productos"
-                  className="h-11 px-3 rounded-none text-white hover:text-white hover:[&_svg]:text-white bg-transparent border-none hover:bg-transparent data-[active=true]:bg-[#424242] data-[active=true]:text-white data-[active=true]:outline-none data-[active=true]:[&_svg]:text-white transition-colors text-[0.9em] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>svg]:text-green-400"
-                >
-                  <Package className="size-5 shrink-0" strokeWidth={2} />
-                  <span className="text-xs font-medium tracking-tight">Productos</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={activeTab === "stock"}
-                  onClick={() => handleNavigation("stock")}
-                  tooltip="Stock"
-                  className="h-11 px-3 rounded-none text-white hover:text-white hover:[&_svg]:text-white bg-transparent border-none hover:bg-transparent data-[active=true]:bg-[#424242] data-[active=true]:text-white data-[active=true]:outline-none data-[active=true]:[&_svg]:text-white transition-colors text-[0.9em] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>svg]:text-violet-400"
-                >
-                  <Store className="size-5 shrink-0" strokeWidth={2} />
-                  <span className="text-xs font-medium tracking-tight">Stock</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {(currentUser?.can_view_dashboard ?? true) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={activeTab === "inventory"}
+                    onClick={() => handleNavigation("inventory")}
+                    tooltip="Dashboard"
+                    className="h-11 px-3 rounded-none text-white hover:text-white hover:[&_svg]:text-white bg-transparent border-none hover:bg-transparent data-[active=true]:bg-[#424242] data-[active=true]:text-white data-[active=true]:outline-none data-[active=true]:[&_svg]:text-white transition-colors text-[0.9em] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>svg]:text-sky-400"
+                  >
+                    <BarChart3 className="size-5 shrink-0" strokeWidth={2} />
+                    <span className="text-xs font-medium tracking-tight">Dashboard</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {(currentUser?.can_view_products ?? true) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={activeTab === "import"}
+                    onClick={() => handleNavigation("import")}
+                    tooltip="Productos"
+                    className="h-11 px-3 rounded-none text-white hover:text-white hover:[&_svg]:text-white bg-transparent border-none hover:bg-transparent data-[active=true]:bg-[#424242] data-[active=true]:text-white data-[active=true]:outline-none data-[active=true]:[&_svg]:text-white transition-colors text-[0.9em] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>svg]:text-green-400"
+                  >
+                    <Package className="size-5 shrink-0" strokeWidth={2} />
+                    <span className="text-xs font-medium tracking-tight">Productos</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {(currentUser?.can_view_stock ?? true) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={activeTab === "stock"}
+                    onClick={() => handleNavigation("stock")}
+                    tooltip="Stock"
+                    className="h-11 px-3 rounded-none text-white hover:text-white hover:[&_svg]:text-white bg-transparent border-none hover:bg-transparent data-[active=true]:bg-[#424242] data-[active=true]:text-white data-[active=true]:outline-none data-[active=true]:[&_svg]:text-white transition-colors text-[0.9em] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>svg]:text-violet-400"
+                  >
+                    <Store className="size-5 shrink-0" strokeWidth={2} />
+                    <span className="text-xs font-medium tracking-tight">Stock</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -157,21 +165,24 @@ export function AppSidebar({
         <SidebarGroup className="p-0">
           <SidebarGroupContent>
             <SidebarMenu className="gap-3 group-data-[collapsible=icon]:gap-1">
-              <SidebarMenuItem>
-                <button
-                  className="w-full flex items-center h-11 px-3 rounded-none bg-transparent text-white transition-colors border-none group-data-[collapsible=icon]:hidden"
-                  onClick={() => setCatalogosOpen((v) => !v)}
-                >
-                  <span className="text-xs font-semibold uppercase tracking-wide">Monitoreo de precios</span>
-                  {catalogosOpen ? (
-                    <ChevronDown className="size-4 ml-auto" />
-                  ) : (
-                    <ChevronRight className="size-4 ml-auto" />
-                  )}
-                </button>
-              </SidebarMenuItem>
-                {(catalogosOpen || isCollapsed) && (
-                  <>
+              {((currentUser?.can_view_precios ?? true) || (currentUser?.can_view_zentor ?? true)) && (
+                <SidebarMenuItem>
+                  <button
+                    className="w-full flex items-center h-11 px-3 rounded-none bg-transparent text-white transition-colors border-none group-data-[collapsible=icon]:hidden"
+                    onClick={() => setCatalogosOpen((v) => !v)}
+                  >
+                    <span className="text-xs font-semibold uppercase tracking-wide">Monitoreo de precios</span>
+                    {catalogosOpen ? (
+                      <ChevronDown className="size-4 ml-auto" />
+                    ) : (
+                      <ChevronRight className="size-4 ml-auto" />
+                    )}
+                  </button>
+                </SidebarMenuItem>
+              )}
+              {(catalogosOpen || isCollapsed) && (
+                <>
+                  {(currentUser?.can_view_precios ?? true) && (
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         onClick={() => handleNavigation("precios")}
@@ -183,6 +194,8 @@ export function AppSidebar({
                         <span className="text-xs font-medium tracking-tight">Precios a Publicar</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
+                  )}
+                  {(currentUser?.can_view_zentor ?? true) && (
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         onClick={() => handleNavigation("zentor")}
@@ -194,30 +207,34 @@ export function AppSidebar({
                         <span className="text-xs font-medium tracking-tight">Lista ZENTOR</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  </>
-                )}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+                  )}
+                </>
+              )}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
           <SidebarGroup className="p-0">
             <SidebarGroupContent>
               <SidebarMenu className="gap-3 group-data-[collapsible=icon]:gap-1">
-                <SidebarMenuItem>
-                  <button
-                  className="w-full flex items-center h-11 px-3 rounded-none bg-transparent text-white transition-colors border-none group-data-[collapsible=icon]:hidden"
-                  onClick={() => setGestionOpen((v) => !v)}
-                  >
-                    <span className="text-xs font-semibold uppercase tracking-wide">Configuración</span>
-                    {gestionOpen ? (
-                      <ChevronDown className="size-4 ml-auto" />
-                  ) : (
-                    <ChevronRight className="size-4 ml-auto" />
-                  )}
-                </button>
-              </SidebarMenuItem>
-                  {(gestionOpen || isCollapsed) && (
-                    <>
+                {((currentUser?.can_view_clients ?? true) || (currentUser?.can_view_brands ?? true) || (currentUser?.can_view_suppliers ?? true)) && (
+                  <SidebarMenuItem>
+                    <button
+                      className="w-full flex items-center h-11 px-3 rounded-none bg-transparent text-white transition-colors border-none group-data-[collapsible=icon]:hidden"
+                      onClick={() => setGestionOpen((v) => !v)}
+                    >
+                      <span className="text-xs font-semibold uppercase tracking-wide">Configuración</span>
+                      {gestionOpen ? (
+                        <ChevronDown className="size-4 ml-auto" />
+                      ) : (
+                        <ChevronRight className="size-4 ml-auto" />
+                      )}
+                    </button>
+                  </SidebarMenuItem>
+                )}
+                {(gestionOpen || isCollapsed) && (
+                  <>
+                    {(currentUser?.can_view_clients ?? true) && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           onClick={() => handleNavigation("clients")}
@@ -229,6 +246,8 @@ export function AppSidebar({
                           <span className="text-xs font-medium tracking-tight">Clientes</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
+                    )}
+                    {(currentUser?.can_view_brands ?? true) && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           onClick={() => handleNavigation("brands")}
@@ -240,6 +259,8 @@ export function AppSidebar({
                           <span className="text-xs font-medium tracking-tight">Marcas</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
+                    )}
+                    {(currentUser?.can_view_suppliers ?? true) && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           onClick={() => handleNavigation("suppliers")}
@@ -251,8 +272,9 @@ export function AppSidebar({
                           <span className="text-xs font-medium tracking-tight">Proveedores</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
-                    </>
-                  )}
+                    )}
+                  </>
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -260,21 +282,24 @@ export function AppSidebar({
           <SidebarGroup className="p-0">
             <SidebarGroupContent>
               <SidebarMenu className="gap-3 group-data-[collapsible=icon]:gap-1">
-                <SidebarMenuItem>
-                  <button
-                  className="w-full flex items-center h-11 px-3 rounded-none bg-transparent text-white transition-colors border-none group-data-[collapsible=icon]:hidden"
-                  onClick={() => setVentasOpen((v) => !v)}
-                  >
-                    <span className="text-xs font-semibold uppercase tracking-wide">Ventas</span>
-                    {ventasOpen ? (
-                      <ChevronDown className="size-4 ml-auto" />
-                  ) : (
-                    <ChevronRight className="size-4 ml-auto" />
-                  )}
-                </button>
-              </SidebarMenuItem>
-                  {(ventasOpen || isCollapsed) && (
-                    <>
+                {((currentUser?.can_view_wholesale ?? true) || (currentUser?.can_view_wholesale_bullpadel ?? true) || (currentUser?.can_view_retail ?? true)) && (
+                  <SidebarMenuItem>
+                    <button
+                      className="w-full flex items-center h-11 px-3 rounded-none bg-transparent text-white transition-colors border-none group-data-[collapsible=icon]:hidden"
+                      onClick={() => setVentasOpen((v) => !v)}
+                    >
+                      <span className="text-xs font-semibold uppercase tracking-wide">Ventas</span>
+                      {ventasOpen ? (
+                        <ChevronDown className="size-4 ml-auto" />
+                      ) : (
+                        <ChevronRight className="size-4 ml-auto" />
+                      )}
+                    </button>
+                  </SidebarMenuItem>
+                )}
+                {(ventasOpen || isCollapsed) && (
+                  <>
+                    {(currentUser?.can_view_wholesale ?? true) && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           onClick={() => handleNavigation("wholesale")}
@@ -286,6 +311,8 @@ export function AppSidebar({
                           <span className="text-xs font-medium tracking-tight">Mayoristas</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
+                    )}
+                    {(currentUser?.can_view_wholesale_bullpadel ?? true) && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           onClick={() => handleNavigation("wholesale-bullpadel")}
@@ -297,6 +324,8 @@ export function AppSidebar({
                           <span className="text-xs font-medium tracking-tight">Mayoristas Bullpadel</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
+                    )}
+                    {(currentUser?.can_view_retail ?? true) && (
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           onClick={() => handleNavigation("retail")}
@@ -308,9 +337,11 @@ export function AppSidebar({
                           <span className="text-xs font-medium tracking-tight">Minoristas</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
-                    </>
-                  )}
+                    )}
+                  </>
+                )}
 
+                {((currentUser?.can_view_rentabilidad ?? true) || (currentUser?.can_view_gastos ?? true) || (currentUser?.can_view_notas_credito ?? true)) && (
                   <SidebarMenuItem>
                     <button
                   className="w-full flex items-center h-11 px-3 rounded-none bg-transparent text-white transition-colors border-none group-data-[collapsible=icon]:hidden"
@@ -324,41 +355,48 @@ export function AppSidebar({
                   )}
                 </button>
               </SidebarMenuItem>
+              )}
                   {(finanzasOpen || isCollapsed) && (
                     <>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          onClick={() => handleNavigation("rentabilidad")}
-                          isActive={activeTab === "rentabilidad"}
-                          tooltip="Rentabilidad Real"
-                          className="h-11 pl-8 pr-3 rounded-none text-white hover:text-white hover:[&_svg]:text-white bg-transparent border-none hover:bg-transparent data-[active=true]:bg-[#424242] data-[active=true]:text-white data-[active=true]:outline-none data-[active=true]:[&_svg]:text-white transition-colors text-[0.9em] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>svg]:text-rose-400"
-                        >
-                          <TrendingUp className="size-5 shrink-0" strokeWidth={2} />
-                          <span className="text-xs font-medium tracking-tight">Rentabilidad Real</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          onClick={() => handleNavigation("gastos")}
-                          isActive={activeTab === "gastos"}
-                          tooltip="Gastos"
-                          className="h-11 pl-8 pr-3 rounded-none text-white bg-transparent border-none hover:bg-transparent data-[active=true]:bg-[#424242] data-[active=true]:text-white data-[active=true]:outline-none data-[active=true]:[&_svg]:text-white transition-colors text-[0.9em] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>svg]:text-red-400"
-                        >
-                          <Receipt className="size-5 shrink-0" strokeWidth={2} />
-                          <span className="text-xs font-medium tracking-tight">Gastos</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          onClick={() => handleNavigation("notas-credito")}
-                          isActive={activeTab === "notas-credito"}
-                          tooltip="Notas de Crédito"
-                          className="h-11 pl-8 pr-3 rounded-none text-white hover:text-white hover:[&_svg]:text-white bg-transparent border-none hover:bg-transparent data-[active=true]:bg-[#424242] data-[active=true]:text-white data-[active=true]:outline-none data-[active=true]:[&_svg]:text-white transition-colors text-[0.9em] relative group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>svg]:text-amber-400"
-                        >
-                          <FileText className="size-5 shrink-0" strokeWidth={2} />
-                          <span className="text-xs font-medium tracking-tight">Notas de Crédito</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
+                      {(currentUser?.can_view_rentabilidad ?? true) && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            onClick={() => handleNavigation("rentabilidad")}
+                            isActive={activeTab === "rentabilidad"}
+                            tooltip="Rentabilidad Real"
+                            className="h-11 pl-8 pr-3 rounded-none text-white hover:text-white hover:[&_svg]:text-white bg-transparent border-none hover:bg-transparent data-[active=true]:bg-[#424242] data-[active=true]:text-white data-[active=true]:outline-none data-[active=true]:[&_svg]:text-white transition-colors text-[0.9em] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>svg]:text-rose-400"
+                          >
+                            <TrendingUp className="size-5 shrink-0" strokeWidth={2} />
+                            <span className="text-xs font-medium tracking-tight">Rentabilidad Real</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {(currentUser?.can_view_gastos ?? true) && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            onClick={() => handleNavigation("gastos")}
+                            isActive={activeTab === "gastos"}
+                            tooltip="Gastos"
+                            className="h-11 pl-8 pr-3 rounded-none text-white bg-transparent border-none hover:bg-transparent data-[active=true]:bg-[#424242] data-[active=true]:text-white data-[active=true]:outline-none data-[active=true]:[&_svg]:text-white transition-colors text-[0.9em] group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>svg]:text-red-400"
+                          >
+                            <Receipt className="size-5 shrink-0" strokeWidth={2} />
+                            <span className="text-xs font-medium tracking-tight">Gastos</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {(currentUser?.can_view_notas_credito ?? true) && (
+                        <SidebarMenuItem>
+                          <SidebarMenuButton
+                            onClick={() => handleNavigation("notas-credito")}
+                            isActive={activeTab === "notas-credito"}
+                            tooltip="Notas de Crédito"
+                            className="h-11 pl-8 pr-3 rounded-none text-white hover:text-white hover:[&_svg]:text-white bg-transparent border-none hover:bg-transparent data-[active=true]:bg-[#424242] data-[active=true]:text-white data-[active=true]:outline-none data-[active=true]:[&_svg]:text-white transition-colors text-[0.9em] relative group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:[&>svg]:text-amber-400"
+                          >
+                            <FileText className="size-5 shrink-0" strokeWidth={2} />
+                            <span className="text-xs font-medium tracking-tight">Notas de Crédito</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
                     </>
                   )}
               </SidebarMenu>

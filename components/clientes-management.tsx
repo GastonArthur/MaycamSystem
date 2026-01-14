@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Search, Edit, Trash2, Plus, Mail, Phone, RefreshCw } from "lucide-react"
+import { Search, Edit, Trash2, Plus, Mail, Phone, RefreshCw, Users } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { getCurrentUser } from "@/lib/auth"
 import { logError } from "@/lib/logger"
@@ -442,6 +442,10 @@ export function ClientesManagement() {
       <div className="space-y-4 flex flex-col">
         <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="bg-gradient-to-r from-cyan-50 to-sky-50 rounded-t-lg">
+            <CardTitle className="flex items-center gap-2 text-sky-800">
+              <Users className="w-5 h-5 text-sky-600" />
+              Clientes
+            </CardTitle>
             <CardDescription>Administre todos los clientes mayoristas y minoristas en un solo lugar</CardDescription>
           </CardHeader>
         </Card>

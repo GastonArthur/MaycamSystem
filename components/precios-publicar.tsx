@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -344,21 +344,19 @@ ${csvRows
 
   return (
     <div className="space-y-6">
-      {/* Header con zócalo amarillo */}
-      <Card className="shadow-lg border-0 bg-gradient-to-r from-yellow-400 to-amber-500 text-white">
-        <CardHeader className="pb-4 flex flex-row items-center justify-between">
+      {/* Header con estilo consistente */}
+      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+        <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-t-lg flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-3 text-2xl font-bold">
-              <DollarSign className="w-8 h-8" />
+            <CardTitle className="flex items-center gap-2 text-amber-800">
+              <DollarSign className="w-5 h-5 text-amber-600" />
               Precios a Publicar
             </CardTitle>
-            <p className="text-yellow-100 text-lg mt-1">
-              Gestione los precios de venta con cuotas y promociones para publicación
-            </p>
+            <CardDescription>Gestione los precios de venta con cuotas y promociones para publicación</CardDescription>
           </div>
           <Button
             onClick={exportPreciosToExcel}
-            className="bg-white text-amber-600 hover:bg-yellow-50 font-bold shadow-md"
+            className="bg-amber-600 text-white hover:bg-amber-700 font-bold shadow-sm"
           >
             <Download className="w-4 h-4 mr-2" />
             Exportar precios

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -378,21 +378,19 @@ ${csvRows
 
   return (
     <div className="space-y-6">
-      {/* Header con zócalo gris oscuro */}
-      <Card className="shadow-lg border-0 bg-gradient-to-r from-gray-700 to-slate-800 text-white">
-        <CardHeader className="pb-4 flex flex-row items-center justify-between">
+      {/* Header con estilo consistente */}
+      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+        <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-t-lg flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-3 text-2xl font-bold">
-              <Package className="w-8 h-8" />
+            <CardTitle className="flex items-center gap-2 text-slate-800">
+              <Package className="w-5 h-5 text-slate-600" />
               Lista ZENTOR
             </CardTitle>
-            <p className="text-gray-200 text-lg mt-1">
-              SKUs únicos con información consolidada y seguimiento de cambios de precios
-            </p>
+            <CardDescription>SKUs únicos con información consolidada y seguimiento de cambios de precios</CardDescription>
           </div>
           <Button
             onClick={exportZentorToExcel}
-            className="bg-white text-gray-800 hover:bg-gray-100 font-bold shadow-md"
+            className="bg-slate-700 text-white hover:bg-slate-800 font-bold shadow-sm"
           >
             <Download className="w-4 h-4 mr-2" />
             Exportar ZENTOR
