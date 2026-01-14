@@ -634,50 +634,7 @@ export default function RentabilidadPage() {
                         )}
                     </div>
 
-                    <div className="hidden md:block">
-                    {/* Mobile View - Cards */}
-                  <div className="md:hidden space-y-3">
-                      {products.map((item) => (
-                        <div key={item.sku} className="border rounded-md p-3 bg-white shadow-sm">
-                           <div className="flex gap-3">
-                              {(item.ml_thumbnail || item.thumbnail) && (
-                                <img src={item.ml_thumbnail || item.thumbnail} alt="" className="w-12 h-12 rounded object-cover border" />
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-sm truncate">{item.name || item.ml_title || item.sku}</div>
-                                <div className="text-xs font-mono text-muted-foreground mb-1">{item.sku}</div>
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                    <Badge variant={item.ml_qty > 0 ? "default" : "secondary"} className="h-5 text-[10px]">
-                                      Stock ML: {item.ml_qty}
-                                    </Badge>
-                                    <Badge variant="outline" className="h-5 text-[10px]">
-                                      {item.ml_status}
-                                    </Badge>
-                                </div>
-                              </div>
-                           </div>
-                           
-                           <div className="mt-3 pt-2 border-t flex flex-wrap gap-1">
-                              {item.ml_connected ? (
-                                    item.ml_accounts.map((acc: string, i: number) => (
-                                        <Badge key={i} variant="outline" className="text-[10px] border-green-200 text-green-700 bg-green-50">
-                                            {acc}
-                                        </Badge>
-                                    ))
-                                ) : (
-                                    <Badge variant="outline" className="text-[10px] text-yellow-600 bg-yellow-50 border-yellow-200">
-                                        No conectado
-                                    </Badge>
-                                )}
-                           </div>
-                        </div>
-                      ))}
-                      {products.length === 0 && (
-                        <div className="text-center py-8 text-muted-foreground">
-                            No se encontraron productos.
-                        </div>
-                      )}
-                  </div>
+
 
                   <div className="hidden md:block">
                   <Table>
@@ -710,6 +667,7 @@ export default function RentabilidadPage() {
                             )}
                         </TableBody>
                     </Table>
+                  </div>
                   </CardContent>
                 </Card>
                 <Card className="col-span-3">

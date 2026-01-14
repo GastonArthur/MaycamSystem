@@ -528,7 +528,7 @@ export function VentasMinoristas({ inventory }: VentasMinoristasProps) {
 
         <div className="flex-1 overflow-y-auto bg-gray-50/50 p-6">
           <TabsContent value="ventas" className="m-0 space-y-6">
-            <div className="grid grid-cols-
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="bg-emerald-600 text-white">
                 <CardContent className="p-4">
                   <p className="text-emerald-100 text-sm">Total Ventas</p>
