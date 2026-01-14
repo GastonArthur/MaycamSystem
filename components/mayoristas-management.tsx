@@ -2737,13 +2737,15 @@ Este reporte contiene información confidencial y está destinado únicamente pa
 
               <Select
                 value={orderFilters.vendedor || undefined}
-                onValueChange={(val) => setOrderFilters((prev) => ({ ...prev, vendedor: val }))}
+                onValueChange={(val) =>
+                  setOrderFilters((prev) => ({ ...prev, vendedor: val === "todos" ? "" : val }))
+                }
               >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Vendedor" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos los vendedores</SelectItem>
+                  <SelectItem value="todos">Todos los vendedores</SelectItem>
                   {vendors.map((vendor) => (
                     <SelectItem key={vendor.id} value={vendor.name}>
                       {vendor.name}
@@ -2754,13 +2756,15 @@ Este reporte contiene información confidencial y está destinado únicamente pa
 
               <Select
                 value={orderFilters.estado || undefined}
-                onValueChange={(val) => setOrderFilters((prev) => ({ ...prev, estado: val }))}
+                onValueChange={(val) =>
+                  setOrderFilters((prev) => ({ ...prev, estado: val === "todos" ? "" : val }))
+                }
               >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos los estados</SelectItem>
+                  <SelectItem value="todos">Todos los estados</SelectItem>
                   <SelectItem value="pending">Pendiente</SelectItem>
                   <SelectItem value="confirmed">Confirmado</SelectItem>
                   <SelectItem value="shipped">Enviado</SelectItem>
@@ -2771,13 +2775,15 @@ Este reporte contiene información confidencial y está destinado únicamente pa
 
               <Select
                 value={orderFilters.pagado || undefined}
-                onValueChange={(val) => setOrderFilters((prev) => ({ ...prev, pagado: val }))}
+                onValueChange={(val) =>
+                  setOrderFilters((prev) => ({ ...prev, pagado: val === "todos" ? "" : val }))
+                }
               >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Pagado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="pagado">Pagado</SelectItem>
                   <SelectItem value="no_pagado">No Pagado</SelectItem>
                 </SelectContent>
@@ -2785,13 +2791,15 @@ Este reporte contiene información confidencial y está destinado únicamente pa
 
               <Select
                 value={orderFilters.cobrado || undefined}
-                onValueChange={(val) => setOrderFilters((prev) => ({ ...prev, cobrado: val }))}
+                onValueChange={(val) =>
+                  setOrderFilters((prev) => ({ ...prev, cobrado: val === "todos" ? "" : val }))
+                }
               >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Cobrado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="cobrado">Cobrado</SelectItem>
                   <SelectItem value="por_cobrar">Por Cobrar</SelectItem>
                 </SelectContent>
