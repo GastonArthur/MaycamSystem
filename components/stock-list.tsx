@@ -617,7 +617,50 @@ export function StockList() {
             </Select>
           </div>
 
-          <div className="rounded overflow-hidden border">
+          <div className="md:hidden space-y-4">
+            {currentItems.map((item) => (
+              <Card key={item.id} className="overflow-hidden">
+                <div className="p-4 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-xs text-gray-500 font-mono block mb-1">{item.sku}</span>
+                      <h3 className="font-bold text-base leading-tight">{item.name}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="secondary" className="text-xs font-normal">
+                          {item.brand}
+                        </Badge>
+                        <span className="text-xs text-gray-400">
+                          {new Date(item.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                       <span className="block font-bold text-lg">{item.quantity}</span>
+                       <span className="text-[10px] text-gray-500 uppercase">Unid.</span>
+                    </div>
+                  </div>
+                  
+                  {!readOnly && (
+                    <div className="flex justify-end gap-2 pt-2 border-t mt-2">
+                       <Button variant="outline" size="sm" className="h-8" onClick={() => openEditDialog(item)}>
+                         <Pencil className="w-3.5 h-3.5 mr-1.5" /> Editar
+                       </Button>
+                       <Button variant="destructive" size="sm" className="h-8" onClick={() => deleteItem(item)}>
+                         <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Eliminar
+                       </Button>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            ))}
+            {currentItems.length === 0 && (
+               <div className="text-center p-8 text-gray-500 bg-gray-50 rounded-lg border border-dashed">
+                 No hay productos encontrados
+               </div>
+            )}
+          </div>
+
+          <div className="hidden md:block rounded overflow-hidden border">
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50">

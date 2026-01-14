@@ -2046,7 +2046,46 @@ Este reporte contiene información confidencial y está destinado únicamente pa
 
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
+                {/* Mobile View - Cards */}
+                <div className="md:hidden space-y-3 p-4 bg-gray-50/50">
+                  {clients.map((client) => (
+                    <div key={client.id} className="bg-white p-4 rounded-lg border shadow-sm space-y-3">
+                      <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-bold text-base text-purple-700" onClick={() => setViewingClient(client)}>{client.name}</h4>
+                            <p className="text-xs text-gray-500">{client.business_name}</p>
+                          </div>
+                          {!isReadOnly && (
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => editClient(client)} className="h-8 w-8 p-0">
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => deleteClient(client)} className="h-8 w-8 p-0 text-red-500">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          )}
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-xs text-gray-500 block">Contacto</span>
+                          <span>{client.contact_person}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-500 block">WhatsApp</span>
+                          <span>{client.whatsapp}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-xs text-gray-500 block">Ubicación</span>
+                          <span>{client.province}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="overflow-x-auto hidden md:block">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -2367,7 +2406,103 @@ Este reporte contiene información confidencial y está destinado únicamente pa
 
             <Card>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
+                {/* Mobile View - Cards */}
+                <div className="md:hidden space-y-4 p-4 bg-gray-50/50">
+                   {(() => {
+                        const filtered = orders
+                          .filter((order) => {
+                            const clientName = clients.find((c) => c.id === order.client_id)?.name || ""
+                            const matchesClient =
+                              orderFilters.cliente === "all" ||
+                              clientName.toLowerCase().includes(orderFilters.cliente.toLowerCase())
+                            const matchesVendor =
+                              orderFilters.vendedor === "all" || order.vendor === orderFilters.vendedor
+                            const matchesEstado = orderFilters.estado === "all" || order.status === orderFilters.estado
+                            const matchesFechaInicio =
+                              !orderFilters.fechaInicio || order.order_date >= orderFilters.fechaInicio
+                            const matchesFechaFin = !orderFilters.fechaFin || order.order_date <= orderFilters.fechaFin
+                            return (
+                              matchesClient && matchesVendor && matchesEstado && matchesFechaInicio && matchesFechaFin
+                            )
+                          })
+                          .sort((a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime())
+                        return filtered.map((order, idx) => {
+                          const clientName =
+                            clients.find((c) => c.id === order.client_id)?.name || "Cliente desconocido"
+                          return (
+                            <Card key={order.id} className="overflow-hidden">
+                               <div className="p-4 space-y-3">
+                                 <div className="flex justify-between items-start">
+                                   <div>
+                                     <div className="flex items-center gap-2 mb-1">
+                                       <span className="text-xs text-gray-500 font-mono">#{order.id}</span>
+                                       <span className="text-xs text-gray-400">{formatDate(order.order_date)}</span>
+                                     </div>
+                                     <h3 className="font-bold text-base">{clientName}</h3>
+                                     {order.vendor && (
+                                       <Badge variant="secondary" className="mt-1 text-[10px]">{order.vendor}</Badge>
+                                     )}
+                                   </div>
+                                   <div className="text-right">
+                                     <span className="block font-bold text-lg text-purple-700">${order.total_amount.toFixed(2)}</span>
+                                     <span className="text-xs text-gray-500">{order.items?.length || 0} items</span>
+                                   </div>
+                                 </div>
+
+                                 <div className="flex flex-wrap gap-2 pt-2">
+                                    <Badge className={`border-0 ${getStatusColor(order.status)}`}>{getStatusLabel(order.status)}</Badge>
+                                    <Badge className={`border-0 ${order.is_paid ? "bg-green-600" : "bg-red-500"} text-white`}>
+                                       {order.is_paid ? "Pagado" : "No Pagado"}
+                                    </Badge>
+                                 </div>
+
+                                 <div className="flex justify-between items-center pt-3 border-t mt-2">
+                                    <Button variant="ghost" size="sm" onClick={() => toggleOrderExpansion(order.id)} className="h-8 text-xs">
+                                       {expandedOrders.includes(order.id) ? "Ocultar items" : "Ver items"}
+                                       {expandedOrders.includes(order.id) ? <ChevronUp className="ml-1 w-3 h-3" /> : <ChevronDown className="ml-1 w-3 h-3" />}
+                                    </Button>
+                                    
+                                    {!isReadOnly && (
+                                       <div className="flex gap-1">
+                                         <Button variant="ghost" size="sm" onClick={() => editOrder(order)} className="h-8 w-8 p-0">
+                                           <Edit className="w-4 h-4" />
+                                         </Button>
+                                         <Button variant="ghost" size="sm" onClick={() => deleteOrder(order)} className="h-8 w-8 p-0 text-red-500">
+                                           <Trash2 className="w-4 h-4" />
+                                         </Button>
+                                       </div>
+                                    )}
+                                 </div>
+
+                                 {expandedOrders.includes(order.id) && (
+                                   <div className="bg-gray-50 -mx-4 -mb-4 p-4 text-sm border-t mt-2">
+                                      {order.items?.map((item, i) => (
+                                        <div key={i} className="flex justify-between py-1 border-b last:border-0 border-gray-200">
+                                          <div className="flex-1">
+                                            <div className="font-medium">{item.description}</div>
+                                            <div className="text-xs text-gray-500">{item.sku}</div>
+                                          </div>
+                                          <div className="text-right pl-2">
+                                            <div>{item.quantity} x {formatCurrency(item.unit_price)}</div>
+                                            <div className="font-medium">{formatCurrency(item.total_price)}</div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                   </div>
+                                 )}
+                               </div>
+                            </Card>
+                          )
+                        })
+                      })()}
+                      {orders.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          No hay pedidos registrados
+                        </div>
+                      )}
+                </div>
+
+                <div className="overflow-x-auto hidden md:block">
                   <Table>
                     <TableHeader>
                       <TableRow>

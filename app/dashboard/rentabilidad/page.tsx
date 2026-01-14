@@ -610,7 +610,77 @@ export default function RentabilidadPage() {
                     <CardTitle>Últimas Ventas</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <Table>
+                    {/* Mobile View - Cards */}
+                    <div className="md:hidden space-y-3">
+                        {filteredSales.slice(0, 5).map((sale) => (
+                            <div key={sale.order_id} className="border rounded-md p-3">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                        <div className="text-xs text-muted-foreground">{format(new Date(sale.date_created), 'dd/MM HH:mm')}</div>
+                                        <div className="font-medium text-sm">{sale.account_name}</div>
+                                    </div>
+                                    <div className="font-bold text-right">{formatCurrency(sale.total_amount)}</div>
+                                </div>
+                                <div className="text-sm truncate text-muted-foreground">
+                                    {sale.items?.[0]?.title || 'Producto'}
+                                    {sale.items && sale.items.length > 1 && ` (+${sale.items.length - 1})`}
+                                </div>
+                            </div>
+                        ))}
+                         {filteredSales.length === 0 && (
+                            <div className="text-center text-muted-foreground py-8">
+                                No se encontraron ventas en este periodo.
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="hidden md:block">
+                    {/* Mobile View - Cards */}
+                  <div className="md:hidden space-y-3">
+                      {products.map((item) => (
+                        <div key={item.sku} className="border rounded-md p-3 bg-white shadow-sm">
+                           <div className="flex gap-3">
+                              {(item.ml_thumbnail || item.thumbnail) && (
+                                <img src={item.ml_thumbnail || item.thumbnail} alt="" className="w-12 h-12 rounded object-cover border" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm truncate">{item.name || item.ml_title || item.sku}</div>
+                                <div className="text-xs font-mono text-muted-foreground mb-1">{item.sku}</div>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                    <Badge variant={item.ml_qty > 0 ? "default" : "secondary"} className="h-5 text-[10px]">
+                                      Stock ML: {item.ml_qty}
+                                    </Badge>
+                                    <Badge variant="outline" className="h-5 text-[10px]">
+                                      {item.ml_status}
+                                    </Badge>
+                                </div>
+                              </div>
+                           </div>
+                           
+                           <div className="mt-3 pt-2 border-t flex flex-wrap gap-1">
+                              {item.ml_connected ? (
+                                    item.ml_accounts.map((acc: string, i: number) => (
+                                        <Badge key={i} variant="outline" className="text-[10px] border-green-200 text-green-700 bg-green-50">
+                                            {acc}
+                                        </Badge>
+                                    ))
+                                ) : (
+                                    <Badge variant="outline" className="text-[10px] text-yellow-600 bg-yellow-50 border-yellow-200">
+                                        No conectado
+                                    </Badge>
+                                )}
+                           </div>
+                        </div>
+                      ))}
+                      {products.length === 0 && (
+                        <div className="text-center py-8 text-muted-foreground">
+                            No se encontraron productos.
+                        </div>
+                      )}
+                  </div>
+
+                  <div className="hidden md:block">
+                  <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Fecha</TableHead>
@@ -735,8 +805,57 @@ export default function RentabilidadPage() {
                         )}
                     </div>
 
+                    {/* Mobile View - Cards */}
+                    <div className="md:hidden space-y-4">
+                        {filteredSales.map((sale) => (
+                            <div key={sale.order_id} className="border rounded-lg p-4 bg-card text-card-foreground shadow-sm">
+                                <div className="flex justify-between items-start mb-3 border-b pb-2">
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono text-xs text-muted-foreground">#{sale.order_id}</span>
+                                            <Badge variant={sale.status === 'paid' ? 'default' : 'secondary'} className="text-[10px] h-5">
+                                                {sale.status}
+                                            </Badge>
+                                        </div>
+                                        <div className="text-xs text-muted-foreground mt-1">{format(new Date(sale.date_created), 'dd/MM/yyyy HH:mm')}</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="font-bold text-lg">{formatCurrency(sale.total_amount)}</div>
+                                        <Badge variant="outline" className="text-[10px]">{sale.account_name}</Badge>
+                                    </div>
+                                </div>
+                                
+                                <div className="space-y-2 mb-3">
+                                    {sale.items?.map((item: any, i: number) => (
+                                        <div key={i} className="text-sm flex justify-between">
+                                            <span className="truncate max-w-[70%]">{item.quantity}x {item.title}</span>
+                                            <span className="text-muted-foreground text-xs">{formatCurrency(item.unit_cost || 0)} c/u</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                <div className="flex justify-between items-center pt-2 border-t bg-muted/20 -mx-4 -mb-4 p-3 rounded-b-lg">
+                                    <div className="text-xs text-muted-foreground">
+                                        Costo: {formatCurrency(sale.total_cost)}
+                                    </div>
+                                    <div className={`font-bold text-sm flex items-center gap-1 ${sale.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        Ganancia: {formatCurrency(sale.profit)}
+                                        {sale.has_warning && (
+                                            <span title="Costo de inventario faltante o cero" className="text-yellow-500">⚠️</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                         {filteredSales.length === 0 && (
+                            <div className="text-center text-muted-foreground py-8 border rounded-lg border-dashed">
+                                No hay ventas que coincidan con los filtros.
+                            </div>
+                        )}
+                    </div>
+
                     {/* Table */}
-                    <div className="rounded-md border">
+                    <div className="hidden md:block rounded-md border">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -981,8 +1100,53 @@ CREATE TABLE IF NOT EXISTS rt_jobs (name TEXT PRIMARY KEY, cursor JSONB, locked_
                     <CardHeader>
                         <CardTitle>Stock en Vivo</CardTitle>
                         <CardDescription>Sincronizado desde MercadoLibre</CardDescription>
-                    </CardHeader>
-                    <CardContent>
+                </CardHeader>
+                <CardContent>
+                    {/* Mobile View - Cards */}
+                    <div className="md:hidden space-y-3">
+                        {stock.map((item) => (
+                            <div key={item.sku} className="border rounded-md p-3 bg-white shadow-sm">
+                                <div className="flex gap-3">
+                                    {item.thumbnail && (
+                                        <img src={item.thumbnail} alt="" className="w-12 h-12 rounded object-cover border" />
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-medium text-sm truncate">{item.title || item.sku}</div>
+                                        <div className="text-xs font-mono text-muted-foreground mb-1">{item.sku}</div>
+                                        <div className="flex justify-between items-end mt-2">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs text-muted-foreground">Cantidad</span>
+                                                <span className="font-bold text-lg">{item.qty}</span>
+                                            </div>
+                                            <div className="flex flex-col text-right">
+                                                <span className="text-xs text-muted-foreground">Costo</span>
+                                                <span className="font-medium">{formatCurrency(item.cost || 0)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="mt-3 pt-2 border-t flex justify-between items-center">
+                                    <div className="flex flex-wrap gap-1">
+                                        {item.accounts.map((acc: string, i: number) => (
+                                            <Badge key={i} variant="outline" className="text-[10px]">
+                                                {acc}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                    <Badge variant={item.qty > 0 ? "default" : "destructive"} className="text-[10px]">
+                                        {item.status}
+                                    </Badge>
+                                </div>
+                            </div>
+                        ))}
+                         {stock.length === 0 && (
+                            <div className="text-center py-8 text-muted-foreground">
+                                No hay datos de stock sincronizados.
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="hidden md:block">
                         <Table>
                             <TableHeader>
                                 <TableRow>
