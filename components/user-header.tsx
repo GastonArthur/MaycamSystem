@@ -283,12 +283,20 @@ export function UserHeader({ onLogout, setActiveTab }: UserHeaderProps) {
 
       <Dialog open={isLogsOpen} onOpenChange={setIsLogsOpen}>
         <DialogContent className="max-w-[90vw] h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Actividad del sistema</DialogTitle>
+            <DialogDescription>Revise los registros recientes de acciones en el sistema.</DialogDescription>
+          </DialogHeader>
           <ActivityLogs />
         </DialogContent>
       </Dialog>
 
       <Dialog open={isUsersOpen} onOpenChange={setIsUsersOpen}>
         <DialogContent className="max-w-[90vw] h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Gestión de usuarios</DialogTitle>
+            <DialogDescription>Configure roles y permisos de acceso de cada usuario.</DialogDescription>
+          </DialogHeader>
           <UserManagement />
         </DialogContent>
       </Dialog>

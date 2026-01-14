@@ -11,6 +11,8 @@ export type User = {
   is_active: boolean
   can_view_logs: boolean
   can_view_wholesale: boolean
+  can_view_rentabilidad?: boolean
+  can_view_precios?: boolean
   created_at: string
   password_hash?: string
   two_factor_enabled?: boolean
@@ -46,6 +48,8 @@ const ADMIN_USER: User = {
   is_active: true,
   can_view_logs: true,
   can_view_wholesale: true,
+  can_view_rentabilidad: true,
+  can_view_precios: true,
   created_at: new Date().toISOString(),
 }
 
@@ -122,7 +126,7 @@ export const login = async (
     // Verificar credenciales en base de datos con mejor rendimiento
     const { data: user, error } = await supabase
       .from("users")
-      .select("id, email, name, role, is_active, can_view_logs, can_view_wholesale, created_at, password_hash")
+      .select("id, email, name, role, is_active, can_view_logs, can_view_wholesale, can_view_rentabilidad, can_view_precios, created_at, password_hash")
       .eq("email", email.toLowerCase().trim())
       .eq("is_active", true)
       .maybeSingle()
@@ -350,7 +354,7 @@ export const checkSession = async (): Promise<User | null> => {
       .select(`
         expires_at,
         users!inner (
-          id, email, name, role, is_active, can_view_logs, can_view_wholesale, created_at
+          id, email, name, role, is_active, can_view_logs, can_view_wholesale, can_view_rentabilidad, can_view_precios, created_at
         )
       `)
       .eq("session_token", sessionToken)
@@ -529,7 +533,7 @@ export const getUsers = async (): Promise<User[]> => {
   try {
     const { data, error } = await supabase
       .from("users")
-      .select("id, email, name, role, is_active, can_view_logs, can_view_wholesale, created_at")
+      .select("id, email, name, role, is_active, can_view_logs, can_view_wholesale, can_view_rentabilidad, can_view_precios, created_at")
       .order("name")
 
     if (error) throw error

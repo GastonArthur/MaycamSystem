@@ -36,6 +36,9 @@ CREATE TABLE IF NOT EXISTS users (
   updated_by INTEGER REFERENCES users(id)
 );
 
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_view_rentabilidad BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_view_precios BOOLEAN DEFAULT false;
+
 CREATE TABLE IF NOT EXISTS user_sessions (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
