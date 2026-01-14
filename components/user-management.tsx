@@ -19,25 +19,64 @@ import { Checkbox } from "@/components/ui/checkbox"
 
 type UserManagementProps = {}
 
-const PERMISSIONS = [
-  { key: "can_view_dashboard", label: "Dashboard" },
-  { key: "can_view_products", label: "Productos" },
-  { key: "can_view_stock", label: "Stock" },
-  { key: "can_view_precios", label: "Precios a Publicar" },
-  { key: "can_view_zentor", label: "Lista ZENTOR" },
-  { key: "can_view_clients", label: "Clientes" },
-  { key: "can_view_brands", label: "Marcas" },
-  { key: "can_view_suppliers", label: "Proveedores" },
-  { key: "can_view_wholesale", label: "Mayoristas" },
-  { key: "can_view_wholesale_bullpadel", label: "Mayoristas Bullpadel" },
-  { key: "can_view_retail", label: "Minoristas" },
-  { key: "can_view_rentabilidad", label: "Rentabilidad Real" },
-  { key: "can_view_gastos", label: "Gastos" },
-  { key: "can_view_compras", label: "Compras" },
-  { key: "can_view_notas_credito", label: "Notas de Crédito" },
-  { key: "can_view_logs", label: "Ver Logs" },
-  { key: "can_view_users", label: "Gestionar Usuarios" },
+const PERMISSION_GROUPS = [
+  {
+    id: "general",
+    title: "General",
+    permissions: [
+      { key: "can_view_dashboard", label: "Dashboard" },
+      { key: "can_view_products", label: "Productos" },
+      { key: "can_view_stock", label: "Stock" },
+    ],
+  },
+  {
+    id: "precios",
+    title: "Monitoreo de precios",
+    permissions: [
+      { key: "can_view_precios", label: "Precios a Publicar" },
+      { key: "can_view_zentor", label: "Lista ZENTOR" },
+    ],
+  },
+  {
+    id: "configuracion",
+    title: "Configuración",
+    permissions: [
+      { key: "can_view_clients", label: "Clientes" },
+      { key: "can_view_brands", label: "Marcas" },
+      { key: "can_view_suppliers", label: "Proveedores" },
+    ],
+  },
+  {
+    id: "ventas",
+    title: "Ventas",
+    permissions: [
+      { key: "can_view_wholesale", label: "Mayoristas" },
+      { key: "can_view_wholesale_bullpadel", label: "Mayoristas Bullpadel" },
+      { key: "can_view_retail", label: "Minoristas" },
+    ],
+  },
+  {
+    id: "finanzas",
+    title: "Finanzas",
+    permissions: [
+      { key: "can_view_rentabilidad", label: "Rentabilidad Real" },
+      { key: "can_view_gastos", label: "Gastos" },
+      { key: "can_view_compras", label: "Compras" },
+      { key: "can_view_notas_credito", label: "Notas de Crédito" },
+    ],
+  },
+  {
+    id: "admin",
+    title: "Administración",
+    permissions: [
+      { key: "can_view_logs", label: "Ver Logs" },
+      { key: "can_view_users", label: "Gestionar Usuarios" },
+    ],
+  },
 ]
+
+// Flatten permissions for easier access if needed, though groups are preferred now
+const ALL_PERMISSIONS = PERMISSION_GROUPS.flatMap(g => g.permissions)
 
 export function UserManagement() {
   const [users, setUsers] = useState<User[]>([])
@@ -230,11 +269,43 @@ export function UserManagement() {
     setPermissionsUser((prev) => (prev ? { ...prev, [key]: checked } : null))
   }
 
+  const handleGroupPermissionChange = (groupIndex: number, checked: boolean) => {
+    if (!permissionsUser) return
+    const group = PERMISSION_GROUPS[groupIndex]
+    const updates: any = {}
+    group.permissions.forEach((perm) => {
+      updates[perm.key] = checked
+    })
+    setPermissionsUser((prev) => (prev ? { ...prev, ...updates } : null))
+  }
+
   const savePermissions = async () => {
     if (!permissionsUser) return
 
     try {
-      const result = await updateUser(permissionsUser.id, permissionsUser)
+      // Ensure we are sending all boolean fields correctly
+      const result = await updateUser(permissionsUser.id, {
+        ...permissionsUser,
+        // Explicitly map all permissions to ensure they are included in the update
+        can_view_dashboard: permissionsUser.can_view_dashboard,
+        can_view_products: permissionsUser.can_view_products,
+        can_view_stock: permissionsUser.can_view_stock,
+        can_view_precios: permissionsUser.can_view_precios,
+        can_view_zentor: permissionsUser.can_view_zentor,
+        can_view_clients: permissionsUser.can_view_clients,
+        can_view_brands: permissionsUser.can_view_brands,
+        can_view_suppliers: permissionsUser.can_view_suppliers,
+        can_view_wholesale: permissionsUser.can_view_wholesale,
+        can_view_wholesale_bullpadel: permissionsUser.can_view_wholesale_bullpadel,
+        can_view_retail: permissionsUser.can_view_retail,
+        can_view_rentabilidad: permissionsUser.can_view_rentabilidad,
+        can_view_gastos: permissionsUser.can_view_gastos,
+        can_view_compras: permissionsUser.can_view_compras,
+        can_view_notas_credito: permissionsUser.can_view_notas_credito,
+        can_view_logs: permissionsUser.can_view_logs,
+        can_view_users: permissionsUser.can_view_users,
+      })
+      
       if (result.success) {
         toast({
           title: "Permisos actualizados",
@@ -582,7 +653,7 @@ export function UserManagement() {
             <div className="border-t pt-4">
               <Label className="text-sm font-semibold mb-3 block">Permisos de Acceso</Label>
               <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto">
-                {PERMISSIONS.map((perm) => (
+                {ALL_PERMISSIONS.map((perm) => (
                   <div key={perm.key} className="flex items-center space-x-2">
                     <Checkbox
                       id={`new-${perm.key}`}
@@ -621,22 +692,49 @@ export function UserManagement() {
             <DialogTitle>Permisos de {permissionsUser?.name}</DialogTitle>
             <DialogDescription>Configura los permisos de acceso a cada sección</DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
+          <div className="py-4 space-y-6">
             {permissionsUser &&
-              PERMISSIONS.map((perm) => (
-                <div key={perm.key} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`perm-${permissionsUser.id}-${perm.key}`}
-                    checked={(permissionsUser as any)[perm.key] ?? true}
-                    onCheckedChange={(checked) => {
-                      handlePermissionChange(perm.key, checked as boolean)
-                    }}
-                  />
-                  <Label className="text-sm">
-                    {perm.label}
-                  </Label>
-                </div>
-              ))}
+              PERMISSION_GROUPS.map((group, index) => {
+                const allChecked = group.permissions.every(
+                  (perm) => (permissionsUser as any)[perm.key] === true
+                )
+                const someChecked = group.permissions.some(
+                  (perm) => (permissionsUser as any)[perm.key] === true
+                )
+                const isIndeterminate = someChecked && !allChecked
+
+                return (
+                  <div key={group.id} className="border rounded-md p-4 bg-slate-50/50">
+                    <div className="flex items-center space-x-2 mb-3 pb-2 border-b border-slate-200">
+                      <Checkbox
+                        id={`group-${group.id}`}
+                        checked={allChecked}
+                        // We use a custom prop or ref for indeterminate state if supported, 
+                        // but standard Checkbox component might not support it directly via props.
+                        // Assuming standard behavior: checked or unchecked.
+                        onCheckedChange={(checked) => handleGroupPermissionChange(index, checked as boolean)}
+                      />
+                      <Label className="font-semibold text-slate-700">{group.title}</Label>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 pl-2">
+                      {group.permissions.map((perm) => (
+                        <div key={perm.key} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`perm-${permissionsUser.id}-${perm.key}`}
+                            checked={(permissionsUser as any)[perm.key] ?? true}
+                            onCheckedChange={(checked) => {
+                              handlePermissionChange(perm.key, checked as boolean)
+                            }}
+                          />
+                          <Label className="text-sm font-normal text-slate-600">
+                            {perm.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
           </div>
           <div className="flex justify-end space-x-2 pt-4">
             <Button variant="secondary" onClick={() => setShowPermissionsDialog(false)}>
