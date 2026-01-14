@@ -19,10 +19,32 @@ import { Checkbox } from "@/components/ui/checkbox"
 
 type UserManagementProps = {}
 
+const PERMISSIONS = [
+  { key: "can_view_dashboard", label: "Dashboard" },
+  { key: "can_view_products", label: "Productos" },
+  { key: "can_view_stock", label: "Stock" },
+  { key: "can_view_precios", label: "Precios a Publicar" },
+  { key: "can_view_zentor", label: "Lista ZENTOR" },
+  { key: "can_view_clients", label: "Clientes" },
+  { key: "can_view_brands", label: "Marcas" },
+  { key: "can_view_suppliers", label: "Proveedores" },
+  { key: "can_view_wholesale", label: "Mayoristas" },
+  { key: "can_view_wholesale_bullpadel", label: "Mayoristas Bullpadel" },
+  { key: "can_view_retail", label: "Minoristas" },
+  { key: "can_view_rentabilidad", label: "Rentabilidad Real" },
+  { key: "can_view_gastos", label: "Gastos" },
+  { key: "can_view_compras", label: "Compras" },
+  { key: "can_view_notas_credito", label: "Notas de Crédito" },
+  { key: "can_view_logs", label: "Ver Logs" },
+  { key: "can_view_users", label: "Gestionar Usuarios" },
+]
+
 export function UserManagement() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [permissionsUser, setPermissionsUser] = useState<User | null>(null)
+  const [showPermissionsDialog, setShowPermissionsDialog] = useState(false)
   const [newUser, setNewUser] = useState({
     email: "",
     name: "",
@@ -203,6 +225,28 @@ export function UserManagement() {
     await handleUpdateUser(userId, { can_view_wholesale: !currentAccess })
   }
 
+  const handlePermissionChange = async (key: string, checked: boolean) => {
+    if (!permissionsUser) return
+
+    setPermissionsUser((prev) => (prev ? { ...prev, [key]: checked } : null))
+    setUsers(users.map((u) => (u.id === permissionsUser.id ? { ...u, [key]: checked } : u)))
+
+    try {
+      const result = await updateUser(permissionsUser.id, { [key]: checked })
+      if (!result.success) {
+        toast({
+          title: "Error",
+          description: result.error || "Error al actualizar permiso",
+          variant: "destructive",
+        })
+        loadUsers()
+      }
+    } catch (error) {
+      logError("Error updating permission:", error)
+      loadUsers()
+    }
+  }
+
   const getRoleColor = (role: string) => {
     switch (role) {
       case "admin":
@@ -356,54 +400,17 @@ export function UserManagement() {
                     )}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <Settings className="w-3 h-3 mr-1" />
-                          Configurar
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                        <DialogHeader>
-                          <DialogTitle>Permisos de {user.name}</DialogTitle>
-                          <DialogDescription>Configura los permisos de acceso a cada sección</DialogDescription>
-                        </DialogHeader>
-                        <div className="grid grid-cols-2 gap-4 py-4">
-                          {[
-                            { key: "can_view_dashboard", label: "Dashboard" },
-                            { key: "can_view_products", label: "Productos" },
-                            { key: "can_view_stock", label: "Stock" },
-                            { key: "can_view_precios", label: "Precios a Publicar" },
-                            { key: "can_view_zentor", label: "Lista ZENTOR" },
-                            { key: "can_view_clients", label: "Clientes" },
-                            { key: "can_view_brands", label: "Marcas" },
-                            { key: "can_view_suppliers", label: "Proveedores" },
-                            { key: "can_view_wholesale", label: "Mayoristas" },
-                            { key: "can_view_wholesale_bullpadel", label: "Mayoristas Bullpadel" },
-                            { key: "can_view_retail", label: "Minoristas" },
-                            { key: "can_view_rentabilidad", label: "Rentabilidad Real" },
-                            { key: "can_view_gastos", label: "Gastos" },
-                            { key: "can_view_compras", label: "Compras" },
-                            { key: "can_view_notas_credito", label: "Notas de Crédito" },
-                            { key: "can_view_logs", label: "Ver Logs" },
-                            { key: "can_view_users", label: "Gestionar Usuarios" },
-                          ].map((perm) => (
-                            <div key={perm.key} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`${user.id}-${perm.key}`}
-                                checked={(user as any)[perm.key] ?? true}
-                                onCheckedChange={(checked) => {
-                                  handleUpdateUser(user.id, { [perm.key]: checked })
-                                }}
-                              />
-                              <Label htmlFor={`${user.id}-${perm.key}`} className="text-sm cursor-pointer">
-                                {perm.label}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setPermissionsUser(user)
+                        setShowPermissionsDialog(true)
+                      }}
+                    >
+                      <Settings className="w-3 h-3 mr-1" />
+                      Configurar
+                    </Button>
                   </TableCell>
                   {/* </CHANGE> */}
                   <TableCell className="hidden md:table-cell">
@@ -563,32 +570,14 @@ export function UserManagement() {
             <div className="border-t pt-4">
               <Label className="text-sm font-semibold mb-3 block">Permisos de Acceso</Label>
               <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto">
-                {[
-                  { key: "can_view_dashboard", label: "Dashboard" },
-                  { key: "can_view_products", label: "Productos" },
-                  { key: "can_view_stock", label: "Stock" },
-                  { key: "can_view_precios", label: "Precios a Publicar" },
-                  { key: "can_view_zentor", label: "Lista ZENTOR" },
-                  { key: "can_view_clients", label: "Clientes" },
-                  { key: "can_view_brands", label: "Marcas" },
-                  { key: "can_view_suppliers", label: "Proveedores" },
-                  { key: "can_view_wholesale", label: "Mayoristas" },
-                  { key: "can_view_wholesale_bullpadel", label: "Mayoristas Bullpadel" },
-                  { key: "can_view_retail", label: "Minoristas" },
-                  { key: "can_view_rentabilidad", label: "Rentabilidad Real" },
-                  { key: "can_view_gastos", label: "Gastos" },
-                  { key: "can_view_compras", label: "Compras" },
-                  { key: "can_view_notas_credito", label: "Notas de Crédito" },
-                  { key: "can_view_logs", label: "Ver Logs" },
-                  { key: "can_view_users", label: "Gestionar Usuarios" },
-                ].map((perm) => (
+                {PERMISSIONS.map((perm) => (
                   <div key={perm.key} className="flex items-center space-x-2">
                     <Checkbox
                       id={`new-${perm.key}`}
                       checked={(newUser as any)[perm.key] ?? true}
                       onCheckedChange={(checked) => setNewUser({ ...newUser, [perm.key]: checked })}
                     />
-                    <Label htmlFor={`new-${perm.key}`} className="text-xs cursor-pointer">
+                    <Label className="text-xs">
                       {perm.label}
                     </Label>
                   </div>
@@ -609,6 +598,33 @@ export function UserManagement() {
             <Button type="submit" onClick={handleCreateUser}>
               Crear Usuario
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Permisos */}
+      <Dialog open={showPermissionsDialog} onOpenChange={setShowPermissionsDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Permisos de {permissionsUser?.name}</DialogTitle>
+            <DialogDescription>Configura los permisos de acceso a cada sección</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            {permissionsUser &&
+              PERMISSIONS.map((perm) => (
+                <div key={perm.key} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`perm-${permissionsUser.id}-${perm.key}`}
+                    checked={(permissionsUser as any)[perm.key] ?? true}
+                    onCheckedChange={(checked) => {
+                      handlePermissionChange(perm.key, checked as boolean)
+                    }}
+                  />
+                  <Label className="text-sm">
+                    {perm.label}
+                  </Label>
+                </div>
+              ))}
           </div>
         </DialogContent>
       </Dialog>

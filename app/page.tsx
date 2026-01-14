@@ -4502,16 +4502,6 @@ ${csvRows
                 <ZentorList inventory={inventory} suppliers={suppliers} brands={brands} />
               </TabsContent>
               <TabsContent value="wholesale">
-                <div className="mb-4">
-                  <Card className="shadow-lg border-0 bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-                    <CardHeader className="py-3">
-                      <CardTitle className="flex items-center gap-2">
-                        <ShoppingCart className="w-5 h-5" />
-                        Mayoristas
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                </div>
                 {hasPermission("VIEW_WHOLESALE") && (
                   <MayoristasManagement inventory={inventory} suppliers={suppliers} brands={brands} />
                 )}
