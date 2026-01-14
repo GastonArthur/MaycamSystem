@@ -1160,6 +1160,7 @@ CREATE TABLE IF NOT EXISTS rt_jobs (name TEXT PRIMARY KEY, cursor JSONB, locked_
                                 )}
                             </TableBody>
                         </Table>
+                    </div>
                     </CardContent>
                 </Card>
             </TabsContent>
