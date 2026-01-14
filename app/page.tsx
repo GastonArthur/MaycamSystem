@@ -8,7 +8,7 @@ import { logout } from "@/lib/auth"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { formatCurrency, convertScientificNotation } from "@/lib/utils"
 import { logError } from "@/lib/logger"
-import { read, utils, writeFile } from "xlsx"
+import { read, utils } from "xlsx"
 import {
   startOfMonth,
   endOfMonth,
@@ -18,7 +18,6 @@ import {
   endOfDay,
   isWithinInterval,
   parseISO,
-  subMonths
 } from "date-fns"
 
 import { Button } from "@/components/ui/button"
@@ -30,8 +29,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { StockManagement } from "@/components/stock-management"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { StockList } from "@/components/stock-list"
 import { Progress } from "@/components/ui/progress"
 import {
@@ -40,16 +38,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -79,7 +70,6 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  DollarSign,
   Edit,
   Trash2,
   Receipt,
@@ -92,10 +82,10 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 
 // Importar componentes de autenticación
@@ -260,17 +250,15 @@ function InventoryManagementContent() {
   useEffect(() => {
     const user = getCurrentUser()
     if (isSupabaseConfigured && user) {
-      supabase
-        .from("user_preferences")
-        .upsert(
-          {
-            user_id: user.id,
-            key: "inventory_visible_columns",
-            value: visibleColumns,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id,key" }
-        )
+      supabase.from("user_preferences").upsert(
+        {
+          user_id: user.id,
+          key: "inventory_visible_columns",
+          value: visibleColumns,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,key" },
+      )
     } else {
       const email = user?.email || "default"
       if (typeof window !== "undefined") {
@@ -344,8 +332,8 @@ function InventoryManagementContent() {
       supplier_id: "",
       brand_id: "",
       company: "",
-      channel: ""
-    }
+      channel: "",
+    },
   })
 
   // Handle URL parameters for navigation from other pages
@@ -382,7 +370,7 @@ function InventoryManagementContent() {
     }
   }, [activeTab, router])
 
-  const loadData = async (scope: string = "inventory") => {
+  const loadData = async (scope = "inventory") => {
     if (scope !== "inventory") {
       return
     }
@@ -412,11 +400,11 @@ function InventoryManagementContent() {
         {
           amount: 25000,
           expense_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-        }
+        },
       ]
 
       const currentMonthExpensesTotal = offlineExpenses
-        .filter(e => e.expense_date.startsWith(currentMonthStr))
+        .filter((e) => e.expense_date.startsWith(currentMonthStr))
         .reduce((sum, e) => sum + e.amount, 0)
 
       setCurrentMonthExpenses(currentMonthExpensesTotal)
@@ -433,29 +421,27 @@ function InventoryManagementContent() {
 
     try {
       // Usar Promise.all para cargar datos en paralelo y mejorar rendimiento
-      const [inventoryResult, suppliersResult, brandsResult, configResult, cuotasResult, expensesResult] = await Promise.all([
-        supabase
-          .from("inventory")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(1000), // Limitar para mejor rendimiento
+      const [inventoryResult, suppliersResult, brandsResult, configResult, cuotasResult, expensesResult] =
+        await Promise.all([
+          supabase
+            .from("inventory")
+            .select("*")
+            .order("created_at", { ascending: false })
+            .limit(1000), // Limitar para mejor rendimiento
 
-        supabase.from("suppliers").select("*").order("name"),
+          supabase.from("suppliers").select("*").order("name"),
 
-        supabase.from("brands").select("*").order("name"),
+          supabase.from("brands").select("*").order("name"),
 
-        supabase.from("config").select("iva_percentage").single(),
+          supabase.from("config").select("iva_percentage").single(),
 
-        supabase
-          .from("config")
-          .select("cuotas_3_percentage, cuotas_6_percentage, cuotas_9_percentage, cuotas_12_percentage")
-          .single(),
+          supabase
+            .from("config")
+            .select("cuotas_3_percentage, cuotas_6_percentage, cuotas_9_percentage, cuotas_12_percentage")
+            .single(),
 
-        supabase
-          .from("expenses")
-          .select("*")
-          .order("expense_date", { ascending: false }),
-      ])
+          supabase.from("expenses").select("*").order("expense_date", { ascending: false }),
+        ])
 
       // Procesar resultados
       if (inventoryResult.error) throw inventoryResult.error
@@ -497,7 +483,7 @@ function InventoryManagementContent() {
         setAllExpenses(expensesResult.data)
         const currentMonth = new Date().toISOString().slice(0, 7)
         const currentMonthExpenses = expensesResult.data.filter((expense) =>
-          expense.expense_date.startsWith(currentMonth)
+          expense.expense_date.startsWith(currentMonth),
         )
         const total = currentMonthExpenses.reduce((sum, item) => sum + item.amount, 0)
         setCurrentMonthExpenses(total)
@@ -561,7 +547,7 @@ function InventoryManagementContent() {
   // Verificar sesión al cargar
   useEffect(() => {
     // Inicializar fecha para evitar error de hidratación
-    setFormData(prev => ({ ...prev, date_entered: new Date().toISOString().split("T")[0] }))
+    setFormData((prev) => ({ ...prev, date_entered: new Date().toISOString().split("T")[0] }))
 
     const initAuth = async () => {
       const user = await checkSession()
@@ -687,9 +673,9 @@ function InventoryManagementContent() {
     if (val instanceof Date) return val.toISOString().split("T")[0]
 
     // Excel serial date (número > 20000 para fechas modernas)
-    // Excel base date is 1899-12-30. 
+    // Excel base date is 1899-12-30.
     // 25569 is offset to 1970-01-01
-    if (typeof val === 'number' && val > 20000) {
+    if (typeof val === "number" && val > 20000) {
       return new Date(Math.round((val - 25569) * 86400 * 1000)).toISOString().split("T")[0]
     }
 
@@ -700,17 +686,17 @@ function InventoryManagementContent() {
     if (strVal.includes("/")) {
       const parts = strVal.split("/")
       if (parts.length === 3) {
-        const day = parseInt(parts[0], 10)
-        const month = parseInt(parts[1], 10) - 1 // JS months are 0-based
-        const year = parseInt(parts[2], 10)
+        const day = Number.parseInt(parts[0], 10)
+        const month = Number.parseInt(parts[1], 10) - 1 // JS months are 0-based
+        const year = Number.parseInt(parts[2], 10)
 
         // Validar fecha
         const d = new Date(year, month, day)
         if (!isNaN(d.getTime()) && d.getDate() === day) {
-          // Ajustar zona horaria local a UTC para evitar desfases si es necesario, 
-          // pero split("T")[0] de ISO usa UTC. 
+          // Ajustar zona horaria local a UTC para evitar desfases si es necesario,
+          // pero split("T")[0] de ISO usa UTC.
           // Mejor construir string YYYY-MM-DD directo para evitar problemas de zona horaria
-          const pad = (n: number) => n < 10 ? '0' + n : n
+          const pad = (n: number) => (n < 10 ? "0" + n : n)
           return `${year}-${pad(month + 1)}-${pad(day)}`
         }
       }
@@ -720,7 +706,7 @@ function InventoryManagementContent() {
     try {
       const d = new Date(strVal)
       if (!isNaN(d.getTime())) return d.toISOString().split("T")[0]
-    } catch (e) { }
+    } catch (e) {}
 
     return new Date().toISOString().split("T")[0]
   }
@@ -761,7 +747,7 @@ function InventoryManagementContent() {
 
       const findKey = (targets: string[]) => {
         for (const target of targets) {
-          const found = availableKeys.find(k => k.toUpperCase().trim() === target)
+          const found = availableKeys.find((k) => k.toUpperCase().trim() === target)
           if (found) return found
         }
         return targets[0]
@@ -778,7 +764,7 @@ function InventoryManagementContent() {
         PVP: findKey(["PVP", "PRICE", "PRECIO"]),
         FACTURA: findKey(["FACTURA", "INVOICE"]),
         PROVEEDOR: findKey(["PROVEEDOR", "PROVEDOR", "SUPPLIER"]),
-        MARCA: findKey(["MARCA", "BRAND"])
+        MARCA: findKey(["MARCA", "BRAND"]),
       }
 
       jsonData.forEach((row: any, index) => {
@@ -791,7 +777,7 @@ function InventoryManagementContent() {
         })
 
         // Agregar cualquier otra columna que no esté en el mapa
-        Object.keys(row).forEach(key => {
+        Object.keys(row).forEach((key) => {
           if (!Object.values(keyMap).includes(key)) {
             normalizedRow[key] = row[key]
           }
@@ -826,9 +812,7 @@ function InventoryManagementContent() {
           const pvp = pvpStr ? Number.parseFloat(pvpStr) : 0
 
           if (!sku || !description) {
-            errors.push(
-              `Fila ${i}: Faltan datos obligatorios (SKU: ${sku}, DESC: ${description ? "OK" : "FALTA"})`,
-            )
+            errors.push(`Fila ${i}: Faltan datos obligatorios (SKU: ${sku}, DESC: ${description ? "OK" : "FALTA"})`)
           } else if ((costStr && isNaN(cost)) || (pvpStr && isNaN(pvp))) {
             errors.push(`Fila ${i}: Precios inválidos (COSTO: ${costStr}, PVP: ${pvpStr})`)
           } else {
@@ -839,7 +823,7 @@ function InventoryManagementContent() {
           }
         } else {
           // Solo reportar error si la fila no está totalmente vacía
-          const hasData = Object.values(row).some(v => String(v).trim().length > 0)
+          const hasData = Object.values(row).some((v) => String(v).trim().length > 0)
           if (hasData) {
             errors.push(`Fila ${i}: SKU faltante o vacío`)
           }
@@ -891,8 +875,19 @@ function InventoryManagementContent() {
 
     // Mapear columnas exactas
     const columnMapping: { [key: string]: string } = {}
-    // Orden solicitado: FECHA, SKU, EAN, DESCRIPCION / NOMBRE, CANTIDAD, COSTO, PVP, FACTURA, PROVEDOR, MARCA
-    const expectedColumns = ["FECHA", "SKU", "EAN", "DESCRIPCION", "CANTIDAD", "COSTO", "PVP", "FACTURA", "PROVEEDOR", "MARCA"]
+    // Orden solicitado: FECHA, SKU, EAN, DESCRIPCION / NOMBRE, CANTIDAD, COSTO, PVP, FACTURA, PROVEEDOR, MARCA
+    const expectedColumns = [
+      "FECHA",
+      "SKU",
+      "EAN",
+      "DESCRIPCION",
+      "CANTIDAD",
+      "COSTO",
+      "PVP",
+      "FACTURA",
+      "PROVEEDOR",
+      "MARCA",
+    ]
     const firstRow = jsonData[0]
     const availableColumns = Object.keys(firstRow)
 
@@ -950,7 +945,7 @@ function InventoryManagementContent() {
 
           // Calcular precios con IVA
           newItem.cost_with_tax = calculateWithTax(newItem.cost_without_tax)
-          newItem.pvp_with_tax = calculateWithTax(newItem.pvp_without_tax)
+          newItem.pvp_with_tax = calculateWithTax(newItem.pvp_with_tax)
 
           setInventory((prev) => [newItem, ...prev])
           successCount++
@@ -1075,16 +1070,13 @@ function InventoryManagementContent() {
             cost_without_tax: cost,
             cost_with_tax: calculateWithTax(cost),
             pvp_without_tax: pvp,
-            pvp_with_tax: calculateWithTax(pvp)
+            pvp_with_tax: calculateWithTax(pvp),
           }
 
           if (supplierId) updates.supplier_id = supplierId
           if (brandId) updates.brand_id = brandId
 
-          const { error: updateError } = await supabase
-            .from("inventory")
-            .update(updates)
-            .eq("id", existingProduct.id)
+          const { error: updateError } = await supabase.from("inventory").update(updates).eq("id", existingProduct.id)
 
           if (updateError) {
             logError(`❌ Error actualizando producto ${sku}:`, updateError)
@@ -1791,7 +1783,7 @@ function InventoryManagementContent() {
   // Funciones de Selección Masiva
   const toggleSelectAll = (checked: boolean) => {
     if (checked) {
-      const allIds = currentItems.map(item => item.id)
+      const allIds = currentItems.map((item) => item.id)
       setSelectedItems(allIds)
     } else {
       setSelectedItems([])
@@ -1800,9 +1792,9 @@ function InventoryManagementContent() {
 
   const toggleSelectItem = (id: number, checked: boolean) => {
     if (checked) {
-      setSelectedItems(prev => [...prev, id])
+      setSelectedItems((prev) => [...prev, id])
     } else {
-      setSelectedItems(prev => prev.filter(itemId => itemId !== id))
+      setSelectedItems((prev) => prev.filter((itemId) => itemId !== id))
     }
   }
 
@@ -1824,17 +1816,14 @@ function InventoryManagementContent() {
     }
 
     try {
-      const { error } = await supabase
-        .from("inventory")
-        .update(updatesToApply)
-        .in("id", selectedItems)
+      const { error } = await supabase.from("inventory").update(updatesToApply).in("id", selectedItems)
 
       if (error) throw error
 
       toast({ title: "Actualización completada", description: `${selectedItems.length} items actualizados.` })
       setBulkEditModal({
         show: false,
-        updates: { stock_status: "", supplier_id: "", brand_id: "", company: "", channel: "" }
+        updates: { stock_status: "", supplier_id: "", brand_id: "", company: "", channel: "" },
       })
       setSelectedItems([])
       loadData()
@@ -1850,24 +1839,24 @@ function InventoryManagementContent() {
     const skuGroups: { [key: string]: InventoryItem[] } = {}
 
     // Agrupar por SKU
-    inventory.forEach(item => {
+    inventory.forEach((item) => {
       if (!skuGroups[item.sku]) {
         skuGroups[item.sku] = []
       }
       skuGroups[item.sku].push(item)
     })
 
-    const duplicates = Object.values(skuGroups).filter(group => group.length > 1)
+    const duplicates = Object.values(skuGroups).filter((group) => group.length > 1)
 
     if (duplicates.length === 0) {
       toast({ title: "Sin duplicados", description: "No se encontraron SKUs duplicados." })
       return
     }
 
-    let deletedCount = 0
+    const deletedCount = 0
     const idsToDelete: number[] = []
 
-    duplicates.forEach(group => {
+    duplicates.forEach((group) => {
       // Encontrar el mejor item para conservar (Mayor precio Costo+PVP)
       // Ordenar descendente por (Costo + PVP)
       group.sort((a, b) => {
@@ -1878,28 +1867,29 @@ function InventoryManagementContent() {
 
       // El primero es el que conservamos, el resto se borra
       const toDelete = group.slice(1)
-      toDelete.forEach(item => idsToDelete.push(item.id))
+      toDelete.forEach((item) => idsToDelete.push(item.id))
     })
 
     if (idsToDelete.length === 0) return
 
     // Confirmar eliminación
-    if (!confirm(`Se encontraron ${duplicates.length} grupos de duplicados. Se eliminarán ${idsToDelete.length} registros duplicados (conservando el de mayor precio). ¿Continuar?`)) {
+    if (
+      !confirm(
+        `Se encontraron ${duplicates.length} grupos de duplicados. Se eliminarán ${idsToDelete.length} registros duplicados (conservando el de mayor precio). ¿Continuar?`,
+      )
+    ) {
       return
     }
 
     try {
-      const { error } = await supabase
-        .from("inventory")
-        .delete()
-        .in("id", idsToDelete)
+      const { error } = await supabase.from("inventory").delete().in("id", idsToDelete)
 
       if (error) throw error
 
       toast({
         title: "Limpieza completada",
         description: `Se eliminaron ${idsToDelete.length} registros duplicados.`,
-        variant: "default"
+        variant: "default",
       })
       loadData()
     } catch (error) {
@@ -2013,9 +2003,9 @@ table {
 ${headers.map((h) => `<th class="header">${h}</th>`).join("")}
 </tr>
 ${csvRows
-        .map((row, index) => {
-          const item = filtered[index]
-          return `<tr>
+  .map((row, index) => {
+    const item = filtered[index]
+    return `<tr>
     <td class="data">${row[0]}</td>
     <td class="data-center">${row[1]}</td>
     <td class="data">${row[2]}</td>
@@ -2024,29 +2014,31 @@ ${csvRows
     <td class="data-number">${row[5]}</td>
     <td class="data-number">${row[6]}</td>
     <td class="data-number">${row[7]}</td>
-    <td class="data-center ${priceVariations[item.id]?.hasVariation
-              ? priceVariations[item.id].isIncrease
-                ? "text-red-600"
-                : "text-green-600"
-              : "text-gray-400"
-            }">${row[8]}</td>
+    <td class="data-center ${
+      priceVariations[item.id]?.hasVariation
+        ? priceVariations[item.id].isIncrease
+          ? "text-red-600"
+          : "text-green-600"
+        : "text-gray-400"
+    }">${row[8]}</td>
     <td class="data-center">${row[9]}</td>
     <td class="data-center empresa">${row[10]}</td>
     <td class="data-center">${row[11]}</td>
     <td class="data-center">${row[12]}</td>
-    <td class="data-center ${item.stock_status === "normal"
-              ? "estado-normal"
-              : item.stock_status === "missing"
-                ? "estado-missing"
-                : "estado-excess"
-            }">${row[13]}</td>
+    <td class="data-center ${
+      item.stock_status === "normal"
+        ? "estado-normal"
+        : item.stock_status === "missing"
+          ? "estado-missing"
+          : "estado-excess"
+    }">${row[13]}</td>
     <td class="data">${row[14]}</td>
     <td class="data">${row[15]}</td>
     <td class="data">${row[16]}</td>
     <td class="data">${row[17]}</td>
   </tr>`
-        })
-        .join("")}
+  })
+  .join("")}
 </table>
 </body>
 </html>`
@@ -2768,10 +2760,7 @@ ${csvRows
                   </Button>
                 )}
 
-                <UserHeader
-                  onLogout={handleLogout}
-                  setActiveTab={setActiveTab}
-                />
+                <UserHeader onLogout={handleLogout} setActiveTab={setActiveTab} />
               </div>
             </div>
 
@@ -2801,14 +2790,14 @@ ${csvRows
                       <Input
                         type="date"
                         value={customDateRange.from}
-                        onChange={(e) => setCustomDateRange(prev => ({ ...prev, from: e.target.value }))}
+                        onChange={(e) => setCustomDateRange((prev) => ({ ...prev, from: e.target.value }))}
                         className="w-auto"
                       />
                       <span className="text-slate-400">-</span>
                       <Input
                         type="date"
                         value={customDateRange.to}
-                        onChange={(e) => setCustomDateRange(prev => ({ ...prev, to: e.target.value }))}
+                        onChange={(e) => setCustomDateRange((prev) => ({ ...prev, to: e.target.value }))}
                         className="w-auto"
                       />
                     </div>
@@ -2826,10 +2815,16 @@ ${csvRows
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-blue-100 text-xs font-medium">
-                            Compras {dashboardFilter === "monthly" ? "Mes" :
-                              dashboardFilter === "weekly" ? "Semana" :
-                                dashboardFilter === "daily" ? "Hoy" :
-                                  dashboardFilter === "historical" ? "Histórico" : "Personalizado"}
+                            Compras{" "}
+                            {dashboardFilter === "monthly"
+                              ? "Mes"
+                              : dashboardFilter === "weekly"
+                                ? "Semana"
+                                : dashboardFilter === "daily"
+                                  ? "Hoy"
+                                  : dashboardFilter === "historical"
+                                    ? "Histórico"
+                                    : "Personalizado"}
                           </p>
                           <p className="text-lg font-bold">{formatCurrency(stats.currentMonthValue)}</p>
                         </div>
@@ -2844,10 +2839,16 @@ ${csvRows
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-pink-100 text-xs font-medium">
-                            Gastos {dashboardFilter === "monthly" ? "Mes" :
-                              dashboardFilter === "weekly" ? "Semana" :
-                                dashboardFilter === "daily" ? "Hoy" :
-                                  dashboardFilter === "historical" ? "Histórico" : "Personalizado"}
+                            Gastos{" "}
+                            {dashboardFilter === "monthly"
+                              ? "Mes"
+                              : dashboardFilter === "weekly"
+                                ? "Semana"
+                                : dashboardFilter === "daily"
+                                  ? "Hoy"
+                                  : dashboardFilter === "historical"
+                                    ? "Histórico"
+                                    : "Personalizado"}
                           </p>
                           <p className="text-lg font-bold">{formatCurrency(stats.currentMonthExpenses)}</p>
                         </div>
@@ -2873,7 +2874,6 @@ ${csvRows
             )}
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-
               <TabsContent value="inventory" className="space-y-6">
                 {/* IVA Config Section - Moved inside Inventory Tab */}
                 {hasPermission("EDIT_CONFIG") && (
@@ -2908,7 +2908,11 @@ ${csvRows
                           <Plus className="w-5 h-5" />
                           Agregar Mercadería
                         </CardTitle>
-                        {isAddItemExpanded ? <ChevronUp className="w-5 h-5 text-blue-800" /> : <ChevronDown className="w-5 h-5 text-blue-800" />}
+                        {isAddItemExpanded ? (
+                          <ChevronUp className="w-5 h-5 text-blue-800" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-blue-800" />
+                        )}
                       </div>
                       {isAddItemExpanded && (
                         <CardDescription>
@@ -2929,11 +2933,12 @@ ${csvRows
                                 value={formData.sku}
                                 onChange={(e) => handleInputChange("sku", e.target.value)}
                                 placeholder="Código SKU"
-                                className={`mt-1 ${formData.sku &&
-                                    inventory.find((item) => item.sku.toLowerCase() === formData.sku.toLowerCase())
+                                className={`mt-1 ${
+                                  formData.sku &&
+                                  inventory.find((item) => item.sku.toLowerCase() === formData.sku.toLowerCase())
                                     ? "border-orange-300 bg-orange-50"
                                     : ""
-                                  }`}
+                                }`}
                               />
                               {formData.sku &&
                                 inventory.find((item) => item.sku.toLowerCase() === formData.sku.toLowerCase()) && (
@@ -3216,328 +3221,206 @@ ${csvRows
                 )}
 
                 {/* Filters */}
-                <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
-                  <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-100">
-                    <Filter className="w-3.5 h-3.5 text-slate-500" />
-                    <h3 className="text-sm font-semibold text-slate-700">Filtros de Búsqueda</h3>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-6 text-xs px-2">
-                          Columnas
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-56">
-                        <DropdownMenuLabel>Mostrar columnas</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.fecha}
-                          onCheckedChange={(c) => setVisibleColumns((prev) => ({ ...prev, fecha: !!c }))}
-                        >
-                          Fecha
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.sku}
-                          onCheckedChange={(c) => setVisibleColumns((prev) => ({ ...prev, sku: !!c }))}
-                        >
-                          SKU
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.ean}
-                          onCheckedChange={(c) => setVisibleColumns((prev) => ({ ...prev, ean: !!c }))}
-                        >
-                          EAN
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.nombre}
-                          onCheckedChange={(c) => setVisibleColumns((prev) => ({ ...prev, nombre: !!c }))}
-                        >
-                          Nombre
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.cantidad}
-                          onCheckedChange={(c) => setVisibleColumns((prev) => ({ ...prev, cantidad: !!c }))}
-                        >
-                          Cantidad
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.costo_sin_iva}
-                          onCheckedChange={(c) => setVisibleColumns((prev) => ({ ...prev, costo_sin_iva: !!c }))}
-                        >
-                          Costo s/IVA
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.costo_con_iva}
-                          onCheckedChange={(c) => setVisibleColumns((prev) => ({ ...prev, costo_con_iva: !!c }))}
-                        >
-                          Costo c/IVA
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.pvp_sin_iva}
-                          onCheckedChange={(c) => setVisibleColumns((prev) => ({ ...prev, pvp_sin_iva: !!c }))}
-                        >
-                          PVP s/IVA
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.pvp_con_iva}
-                          onCheckedChange={(c) => setVisibleColumns((prev) => ({ ...prev, pvp_con_iva: !!c }))}
-                        >
-                          PVP c/IVA
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.variacion_precio}
-                          onCheckedChange={(c) =>
-                            setVisibleColumns((prev) => ({ ...prev, variacion_precio: !!c }))
-                          }
-                        >
-                          Var. Precio
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.empresa}
-                          onCheckedChange={(c) => setVisibleColumns((prev) => ({ ...prev, empresa: !!c }))}
-                        >
-                          Empresa
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.canal}
-                          onCheckedChange={(c) => setVisibleColumns((prev) => ({ ...prev, canal: !!c }))}
-                        >
-                          Canal
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.marca}
-                          onCheckedChange={(c) => setVisibleColumns((prev) => ({ ...prev, marca: !!c }))}
-                        >
-                          Marca
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.estado}
-                          onCheckedChange={(c) => setVisibleColumns((prev) => ({ ...prev, estado: !!c }))}
-                        >
-                          Estado
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.factura}
-                          onCheckedChange={(c) => setVisibleColumns((prev) => ({ ...prev, factura: !!c }))}
-                        >
-                          Factura
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.observaciones}
-                          onCheckedChange={(c) =>
-                            setVisibleColumns((prev) => ({ ...prev, observaciones: !!c }))
-                          }
-                        >
-                          Observaciones
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.repeticiones}
-                          onCheckedChange={(c) =>
-                            setVisibleColumns((prev) => ({ ...prev, repeticiones: !!c }))
-                          }
-                        >
-                          Rep.
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={visibleColumns.acciones}
-                          onCheckedChange={(c) => setVisibleColumns((prev) => ({ ...prev, acciones: !!c }))}
-                        >
-                          Acciones
-                        </DropdownMenuCheckboxItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setFilters({
-                          period: "all",
-                          dateFrom: "",
-                          dateTo: "",
-                          supplier: "all",
-                          brand: "all",
-                          company: "all",
-                          duplicates: "all",
-                          sortBy: "date_desc",
-                          searchSku: "",
-                        })
-                      }
-                      className="ml-auto h-6 text-xs text-slate-400 hover:text-red-500 px-2"
-                    >
-                      <X className="w-3 h-3 mr-1" />
-                      Limpiar
-                    </Button>
+                <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                  <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <Filter className="w-4 h-4 text-slate-500" />
+                      <h3 className="text-sm font-semibold text-slate-700">Filtros de Búsqueda</h3>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-7 text-xs bg-transparent">
+                            <Settings className="w-3 h-3 mr-1" />
+                            Columnas
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuLabel>Columnas visibles</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {Object.entries(visibleColumns).map(([key, value]) => (
+                            <DropdownMenuCheckboxItem
+                              key={key}
+                              checked={value}
+                              onCheckedChange={(checked) => setVisibleColumns((prev) => ({ ...prev, [key]: checked }))}
+                            >
+                              {key.replace(/_/g, " ").charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " ")}
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setFilters({
+                            period: "all",
+                            dateFrom: "",
+                            dateTo: "",
+                            supplier: "all",
+                            brand: "all",
+                            company: "all",
+                            duplicates: "all",
+                            sortBy: "date_desc",
+                            searchSku: "",
+                          })
+                        }
+                        className="h-7 text-xs text-slate-400 hover:text-red-500 px-2"
+                      >
+                        <X className="w-3 h-3 mr-1" />
+                        Limpiar
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                      <div className="lg:col-span-5">
-                        <Label className="text-xs text-slate-500 mb-1 block">Buscar</Label>
-                        <div className="relative">
-                          <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
-                          <Input
-                            placeholder="SKU o descripción"
-                            value={filters.searchSku}
-                            onChange={(e) => setFilters((prev) => ({ ...prev, searchSku: e.target.value }))}
-                            className="pl-8 h-8 text-sm"
-                          />
-                        </div>
-                      </div>
-                      <div className="lg:col-span-2">
-                        <Label className="text-xs text-slate-500 mb-1 block">Proveedor</Label>
-                        <Select
-                          value={filters.supplier || "all"}
-                          onValueChange={(value) => setFilters((prev) => ({ ...prev, supplier: value }))}
-                        >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder="Todos" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todos los proveedores</SelectItem>
-                            <SelectItem value="none">Sin proveedor</SelectItem>
-                            {suppliers.map((supplier) => (
-                              <SelectItem key={supplier.id} value={supplier.id.toString()}>
-                                {supplier.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="lg:col-span-2">
-                        <Label className="text-xs text-slate-500 mb-1 block">Marca</Label>
-                        <Select
-                          value={filters.brand || "all"}
-                          onValueChange={(value) => setFilters((prev) => ({ ...prev, brand: value }))}
-                        >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder="Todas" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todas las marcas</SelectItem>
-                            <SelectItem value="none">Sin marca</SelectItem>
-                            {brands.map((brand) => (
-                              <SelectItem key={brand.id} value={brand.id.toString()}>
-                                {brand.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="lg:col-span-3">
-                        <Label className="text-xs text-slate-500 mb-1 block">Empresa</Label>
-                        <Select
-                          value={filters.company}
-                          onValueChange={(value) => setFilters((prev) => ({ ...prev, company: value }))}
-                        >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder="Todas" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todas las empresas</SelectItem>
-                            <SelectItem value="MAYCAM">MAYCAM</SelectItem>
-                            <SelectItem value="BLUE DOGO">BLUE DOGO</SelectItem>
-                            <SelectItem value="GLOBOBAZAAR">GLOBOBAZAAR</SelectItem>
-                          </SelectContent>
-                        </Select>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div>
+                      <Label className="text-xs text-slate-500 mb-1 block">Buscar</Label>
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
+                        <Input
+                          placeholder="SKU o descripción"
+                          value={filters.searchSku}
+                          onChange={(e) => setFilters((prev) => ({ ...prev, searchSku: e.target.value }))}
+                          className="pl-8 h-8 text-sm"
+                        />
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                      <div className="lg:col-span-3">
-                        <Label className="text-xs text-slate-500 mb-1 block">Periodo</Label>
-                        <Select
-                          value={filters.period}
-                          onValueChange={(value) => setFilters((prev) => ({ ...prev, period: value }))}
-                        >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder="Seleccionar" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todo el historial</SelectItem>
-                            <SelectItem value="today">Hoy</SelectItem>
-                            <SelectItem value="week">Esta Semana</SelectItem>
-                            <SelectItem value="month">Este Mes</SelectItem>
-                            <SelectItem value="year">Este Año</SelectItem>
-                            <SelectItem value="custom">Personalizado</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {filters.period === "custom" ? (
-                        <div className="lg:col-span-4 flex gap-2">
-                          <div className="flex-1">
-                            <Label className="text-xs text-slate-500 mb-1 block">Desde</Label>
-                            <Input
-                              type="date"
-                              value={filters.dateFrom}
-                              onChange={(e) => setFilters((prev) => ({ ...prev, dateFrom: e.target.value }))}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <Label className="text-xs text-slate-500 mb-1 block">Hasta</Label>
-                            <Input
-                              type="date"
-                              value={filters.dateTo}
-                              onChange={(e) => setFilters((prev) => ({ ...prev, dateTo: e.target.value }))}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="hidden lg:block lg:col-span-4"></div>
-                      )}
-                      <div className="lg:col-span-2">
-                        <Label className="text-xs text-slate-500 mb-1 block">Items por página</Label>
-                        <Select
-                          value={itemsPerPage.toString()}
-                          onValueChange={(value) => setItemsPerPage(Number(value))}
-                        >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder="50" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="50">50</SelectItem>
-                            <SelectItem value="100">100</SelectItem>
-                            <SelectItem value="200">200</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="lg:col-span-2">
-                        <Label className="text-xs text-slate-500 mb-1 block">Duplicados</Label>
-                        <Select
-                          value={filters.duplicates || "all"}
-                          onValueChange={(value) => setFilters((prev) => ({ ...prev, duplicates: value }))}
-                        >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder="Todos" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Todos</SelectItem>
-                            <SelectItem value="duplicated">Solo Duplicados</SelectItem>
-                            <SelectItem value="unique">Solo Únicos</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="lg:col-span-3">
-                        <Label className="text-xs text-slate-500 mb-1 block">Ordenar</Label>
-                        <Select
-                          value={filters.sortBy}
-                          onValueChange={(value) => setFilters((prev) => ({ ...prev, sortBy: value }))}
-                        >
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder="Seleccionar" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="date_desc">Más recientes</SelectItem>
-                            <SelectItem value="date_asc">Más antiguos</SelectItem>
-                            <SelectItem value="price_asc">Menor precio</SelectItem>
-                            <SelectItem value="price_desc">Mayor precio</SelectItem>
-                            <SelectItem value="pvp_desc">PVP Mayor a Menor</SelectItem>
-                            <SelectItem value="cost_desc">Costo Mayor a Menor</SelectItem>
-                            <SelectItem value="sku_duplicates">Duplicados</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    <div>
+                      <Label className="text-xs text-slate-500 mb-1 block">Proveedor</Label>
+                      <Select
+                        value={filters.supplier || "all"}
+                        onValueChange={(value) => setFilters((prev) => ({ ...prev, supplier: value }))}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Todos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          {suppliers.map((s) => (
+                            <SelectItem key={s.id} value={s.id.toString()}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500 mb-1 block">Marca</Label>
+                      <Select
+                        value={filters.brand || "all"}
+                        onValueChange={(value) => setFilters((prev) => ({ ...prev, brand: value }))}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Todas" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas</SelectItem>
+                          {brands.map((b) => (
+                            <SelectItem key={b.id} value={b.id.toString()}>
+                              {b.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500 mb-1 block">Empresa</Label>
+                      <Select
+                        value={filters.company}
+                        onValueChange={(value) => setFilters((prev) => ({ ...prev, company: value }))}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Todas" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas</SelectItem>
+                          <SelectItem value="MAYCAM">MAYCAM</SelectItem>
+                          <SelectItem value="BLUE DOGO">BLUE DOGO</SelectItem>
+                          <SelectItem value="GLOBOBAZAAR">GLOBOBAZAAR</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
+                    <div>
+                      <Label className="text-xs text-slate-500 mb-1 block">Periodo</Label>
+                      <Select
+                        value={filters.period}
+                        onValueChange={(value) => setFilters((prev) => ({ ...prev, period: value }))}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Seleccionar" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todo el tiempo</SelectItem>
+                          <SelectItem value="today">Hoy</SelectItem>
+                          <SelectItem value="week">Esta semana</SelectItem>
+                          <SelectItem value="month">Este mes</SelectItem>
+                          <SelectItem value="year">Este año</SelectItem>
+                          <SelectItem value="custom">Personalizado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {filters.period === "custom" && (
+                      <>
+                        <div>
+                          <Label className="text-xs text-slate-500 mb-1 block">Desde</Label>
+                          <Input
+                            type="date"
+                            value={filters.dateFrom}
+                            onChange={(e) => setFilters((prev) => ({ ...prev, dateFrom: e.target.value }))}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-slate-500 mb-1 block">Hasta</Label>
+                          <Input
+                            type="date"
+                            value={filters.dateTo}
+                            onChange={(e) => setFilters((prev) => ({ ...prev, dateTo: e.target.value }))}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </>
+                    )}
+                    <div>
+                      <Label className="text-xs text-slate-500 mb-1 block">Duplicados</Label>
+                      <Select
+                        value={filters.duplicates || "all"}
+                        onValueChange={(value) => setFilters((prev) => ({ ...prev, duplicates: value }))}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Todos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          <SelectItem value="duplicated">Solo duplicados</SelectItem>
+                          <SelectItem value="unique">Solo únicos</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500 mb-1 block">Ordenar</Label>
+                      <Select
+                        value={filters.sortBy}
+                        onValueChange={(value) => setFilters((prev) => ({ ...prev, sortBy: value }))}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Seleccionar" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="date_desc">Más recientes</SelectItem>
+                          <SelectItem value="date_asc">Más antiguos</SelectItem>
+                          <SelectItem value="price_asc">Precio menor</SelectItem>
+                          <SelectItem value="price_desc">Precio mayor</SelectItem>
+                          <SelectItem value="sku_duplicates">Más duplicados</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  {/* </CHANGE> */}
                 </div>
 
                 {/* Inventory Table */}
@@ -3558,12 +3441,20 @@ ${csvRows
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button onClick={exportToCSV} variant="outline" className="shadow-sm bg-white hover:bg-slate-50">
+                        <Button
+                          onClick={exportToCSV}
+                          variant="outline"
+                          className="shadow-sm bg-white hover:bg-slate-50"
+                        >
                           <Download className="w-4 h-4 mr-2" />
                           Exportar Excel
                         </Button>
                         {hasPermission("DELETE_ITEM") && (
-                          <Button onClick={handleRemoveDuplicates} variant="outline" className="shadow-sm bg-white hover:bg-red-50 text-red-600 border-red-200">
+                          <Button
+                            onClick={handleRemoveDuplicates}
+                            variant="outline"
+                            className="shadow-sm bg-white hover:bg-red-50 text-red-600 border-red-200"
+                          >
                             <Trash2 className="w-4 h-4 mr-2" />
                             Eliminar Duplicados
                           </Button>
@@ -3576,7 +3467,9 @@ ${csvRows
                     {selectedItems.length > 0 && (
                       <div className="sticky top-0 z-30 bg-blue-50 border-b border-blue-200 p-2 flex items-center justify-between shadow-sm animate-in slide-in-from-top duration-200">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-blue-800 text-sm">{selectedItems.length} seleccionados</span>
+                          <span className="font-semibold text-blue-800 text-sm">
+                            {selectedItems.length} seleccionados
+                          </span>
                           <Button
                             variant="outline"
                             size="sm"
@@ -3615,10 +3508,14 @@ ${csvRows
                               </TableHead>
                             )}
                             {visibleColumns.sku && (
-                              <TableHead className="font-bold text-white text-center border-r border-blue-400/30 text-xs px-2 h-8">SKU</TableHead>
+                              <TableHead className="font-bold text-white text-center border-r border-blue-400/30 text-xs px-2 h-8">
+                                SKU
+                              </TableHead>
                             )}
                             {visibleColumns.ean && (
-                              <TableHead className="font-bold text-white text-center border-r border-blue-400/30 text-xs px-2 h-8 hidden md:table-cell">EAN</TableHead>
+                              <TableHead className="font-bold text-white text-center border-r border-blue-400/30 text-xs px-2 h-8 hidden md:table-cell">
+                                EAN
+                              </TableHead>
                             )}
                             {visibleColumns.nombre && (
                               <TableHead className="font-bold text-white text-center border-r border-blue-400/30 text-xs px-2 h-8">
@@ -3700,7 +3597,10 @@ ${csvRows
                         <TableBody>
                           {currentItems.length > 0 ? (
                             currentItems.map((item) => (
-                              <TableRow key={item.id} className="hover:bg-blue-100/40 transition-colors border-b border-slate-100 group h-8 even:bg-blue-50/10">
+                              <TableRow
+                                key={item.id}
+                                className="hover:bg-blue-100/40 transition-colors border-b border-slate-100 group h-8 even:bg-blue-50/10"
+                              >
                                 <TableCell className="w-[40px] px-2 py-1 border-r border-slate-100 text-center align-middle">
                                   <Checkbox
                                     checked={selectedItems.includes(item.id)}
@@ -3727,12 +3627,18 @@ ${csvRows
                                   </TableCell>
                                 )}
                                 {visibleColumns.ean && (
-                                  <TableCell className="border-r border-slate-100 py-1 px-2 text-xs max-w-[100px] truncate hidden md:table-cell" title={item.ean || ""}>
+                                  <TableCell
+                                    className="border-r border-slate-100 py-1 px-2 text-xs max-w-[100px] truncate hidden md:table-cell"
+                                    title={item.ean || ""}
+                                  >
                                     {item.ean || "-"}
                                   </TableCell>
                                 )}
                                 {visibleColumns.nombre && (
-                                  <TableCell className="border-r border-slate-100 py-1 px-2 text-xs max-w-[150px] truncate" title={item.description}>
+                                  <TableCell
+                                    className="border-r border-slate-100 py-1 px-2 text-xs max-w-[150px] truncate"
+                                    title={item.description}
+                                  >
                                     {item.description}
                                   </TableCell>
                                 )}
@@ -3787,7 +3693,10 @@ ${csvRows
                                 )}
                                 {visibleColumns.empresa && (
                                   <TableCell className="border-r border-slate-100 text-center py-1 px-2 text-xs hidden md:table-cell">
-                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 h-5 px-1 text-[10px]">
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-blue-50 text-blue-700 border-blue-200 h-5 px-1 text-[10px]"
+                                    >
                                       {item.company.substring(0, 3)}
                                     </Badge>
                                   </TableCell>
@@ -3798,7 +3707,10 @@ ${csvRows
                                   </TableCell>
                                 )}
                                 {visibleColumns.marca && (
-                                  <TableCell className="border-r border-slate-100 py-1 px-2 text-xs truncate max-w-[80px] hidden md:table-cell" title={item.brands?.name}>
+                                  <TableCell
+                                    className="border-r border-slate-100 py-1 px-2 text-xs truncate max-w-[80px] hidden md:table-cell"
+                                    title={item.brands?.name}
+                                  >
                                     {item.brands?.name}
                                   </TableCell>
                                 )}
@@ -3809,8 +3721,8 @@ ${csvRows
                                         item.stock_status === "normal"
                                           ? "default"
                                           : item.stock_status === "missing"
-                                          ? "destructive"
-                                          : "secondary"
+                                            ? "destructive"
+                                            : "secondary"
                                       }
                                       className={`h-5 px-1 text-[10px] ${
                                         item.stock_status === "normal"
@@ -3821,8 +3733,8 @@ ${csvRows
                                       {item.stock_status === "normal"
                                         ? "Ok"
                                         : item.stock_status === "missing"
-                                        ? "Faltó"
-                                        : "Sobró"}
+                                          ? "Faltó"
+                                          : "Sobró"}
                                     </Badge>
                                   </TableCell>
                                 )}
@@ -3845,7 +3757,9 @@ ${csvRows
                                 {visibleColumns.repeticiones && (
                                   <TableCell className="border-r border-slate-100 py-1 px-2 text-xs hidden md:table-cell">
                                     <div className="flex items-center gap-1 justify-center">
-                                      <span className="font-medium text-slate-600">{skuStats.skuCounts[item.sku]}x</span>
+                                      <span className="font-medium text-slate-600">
+                                        {skuStats.skuCounts[item.sku]}x
+                                      </span>
                                       {skuStats.skuCounts[item.sku] > 1 && (
                                         <Badge
                                           variant="destructive"
@@ -3922,14 +3836,28 @@ ${csvRows
                             <CardHeader className="p-3 pb-1">
                               <div className="flex justify-between items-start">
                                 <div className="flex-1">
-                                  <CardTitle className="text-sm font-bold text-blue-800 line-clamp-2">{item.description}</CardTitle>
+                                  <CardTitle className="text-sm font-bold text-blue-800 line-clamp-2">
+                                    {item.description}
+                                  </CardTitle>
                                   <div className="flex items-center gap-2 mt-1">
-                                    <Badge variant="outline" className="text-[10px] h-5">{item.sku}</Badge>
-                                    {item.brands?.name && <Badge variant="secondary" className="text-[10px] h-5">{item.brands.name}</Badge>}
+                                    <Badge variant="outline" className="text-[10px] h-5">
+                                      {item.sku}
+                                    </Badge>
+                                    {item.brands?.name && (
+                                      <Badge variant="secondary" className="text-[10px] h-5">
+                                        {item.brands.name}
+                                      </Badge>
+                                    )}
                                   </div>
                                 </div>
                                 <div className="flex flex-col items-end gap-1">
-                                  <Badge className={item.quantity > 0 ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200" : "bg-red-100 text-red-800 hover:bg-red-200"}>
+                                  <Badge
+                                    className={
+                                      item.quantity > 0
+                                        ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                                        : "bg-red-100 text-red-800 hover:bg-red-200"
+                                    }
+                                  >
                                     {item.quantity} un.
                                   </Badge>
                                 </div>
@@ -3943,14 +3871,35 @@ ${csvRows
                                 </div>
                                 <div className="text-right">
                                   <span className="text-slate-500 block">PVP c/IVA</span>
-                                  <span className="font-mono font-bold text-base text-blue-700">${item.pvp_with_tax.toFixed(2)}</span>
+                                  <span className="font-mono font-bold text-base text-blue-700">
+                                    ${item.pvp_with_tax.toFixed(2)}
+                                  </span>
                                 </div>
                               </div>
                               <div className="flex items-center justify-between gap-2 border-t pt-2">
                                 <span className="text-slate-400 text-[10px]">{item.date_entered}</span>
                                 <div className="flex gap-2">
-                                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleEdit(item)}>Editar</Button>
-                                  <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => setDeleteConfirm({ show: true, type: "item", id: item.id, name: item.description })}>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs bg-transparent"
+                                    onClick={() => editInventoryItem(item)}
+                                  >
+                                    Editar
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    className="h-7 text-xs"
+                                    onClick={() =>
+                                      setDeleteConfirm({
+                                        show: true,
+                                        type: "item",
+                                        id: item.id,
+                                        name: item.description,
+                                      })
+                                    }
+                                  >
                                     <Trash2 className="w-3 h-3" />
                                   </Button>
                                 </div>
@@ -3969,7 +3918,8 @@ ${csvRows
                     {/* Controles de Paginación */}
                     <div className="flex items-center justify-between px-4 py-4 border-t border-slate-200 bg-slate-50 rounded-b-lg">
                       <div className="text-sm text-slate-500">
-                        Mostrando {filteredInventory.length > 0 ? startIndex + 1 : 0} a {Math.min(endIndex, filteredInventory.length)} de {filteredInventory.length} productos
+                        Mostrando {filteredInventory.length > 0 ? startIndex + 1 : 0} a{" "}
+                        {Math.min(endIndex, filteredInventory.length)} de {filteredInventory.length} productos
                       </div>
                       <div className="flex items-center space-x-2">
                         <Button
@@ -4034,10 +3984,7 @@ ${csvRows
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="w-full h-[75vh]">
-                      <iframe
-                        src="/dashboard/rentabilidad"
-                        className="w-full h-full border-0"
-                      />
+                      <iframe src="/dashboard/rentabilidad" className="w-full h-full border-0" />
                     </div>
                   </CardContent>
                 </Card>
@@ -4055,7 +4002,8 @@ ${csvRows
                         Importar desde Excel
                       </CardTitle>
                       <CardDescription>
-                        Importe productos desde un archivo CSV. Descarga la plantilla para ver el formato exacto requerido.
+                        Importe productos desde un archivo CSV. Descarga la plantilla para ver el formato exacto
+                        requerido.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-6 space-y-6">
@@ -4115,7 +4063,8 @@ ${csvRows
                           </div>
                         </div>
                         <p className="text-blue-600 mt-4">
-                          <strong>Ejemplo:</strong> PALETA22;45435435;PALETA FORMATO 22;3;100;170;1000-224586;ONYX;BULLPADEL
+                          <strong>Ejemplo:</strong> PALETA22;45435435;PALETA FORMATO
+                          22;3;100;170;1000-224586;ONYX;BULLPADEL
                         </p>
                       </div>
 
@@ -4164,7 +4113,10 @@ ${csvRows
                           value={newSupplier}
                           onChange={(e) => setNewSupplier(e.target.value)}
                         />
-                        <Button onClick={addSupplier} className="bg-orange-500 hover:bg-orange-600 text-white shadow-sm">
+                        <Button
+                          onClick={addSupplier}
+                          className="bg-orange-500 hover:bg-orange-600 text-white shadow-sm"
+                        >
                           Agregar
                         </Button>
                       </div>
@@ -4269,16 +4221,50 @@ ${csvRows
                             <div className="flex gap-2 ml-4">
                               {editingSupplier?.id === supplier.id ? (
                                 <>
-                                  <Button size="sm" onClick={() => updateSupplier(editingSupplier)} className="h-8 w-8 p-0 bg-green-600"><Check className="h-4 w-4" /></Button>
-                                  <Button size="sm" variant="ghost" onClick={() => setEditingSupplier(null)} className="h-8 w-8 p-0"><X className="h-4 w-4" /></Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => updateSupplier(editingSupplier)}
+                                    className="h-8 w-8 p-0 bg-green-600"
+                                  >
+                                    <Check className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setEditingSupplier(null)}
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
                                 </>
                               ) : (
                                 <>
                                   {hasPermission("EDIT_SUPPLIER") && (
-                                    <Button size="sm" variant="outline" onClick={() => setEditingSupplier(supplier)} className="h-8 w-8 p-0"><Edit className="h-4 w-4" /></Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setEditingSupplier(supplier)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
                                   )}
                                   {hasPermission("DELETE_SUPPLIER") && (
-                                    <Button size="sm" variant="destructive" onClick={() => setDeleteConfirm({ show: true, type: "supplier", id: supplier.id, name: supplier.name })} className="h-8 w-8 p-0"><Trash2 className="h-4 w-4" /></Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() =>
+                                        setDeleteConfirm({
+                                          show: true,
+                                          type: "supplier",
+                                          id: supplier.id,
+                                          name: supplier.name,
+                                        })
+                                      }
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
                                   )}
                                 </>
                               )}
@@ -4414,16 +4400,45 @@ ${csvRows
                             <div className="flex gap-2 ml-4">
                               {editingBrand?.id === brand.id ? (
                                 <>
-                                  <Button size="sm" onClick={() => updateBrand(editingBrand)} className="h-8 w-8 p-0 bg-green-600"><Check className="h-4 w-4" /></Button>
-                                  <Button size="sm" variant="ghost" onClick={() => setEditingBrand(null)} className="h-8 w-8 p-0"><X className="h-4 w-4" /></Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => updateBrand(editingBrand)}
+                                    className="h-8 w-8 p-0 bg-green-600"
+                                  >
+                                    <Check className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setEditingBrand(null)}
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
                                 </>
                               ) : (
                                 <>
                                   {hasPermission("EDIT_BRAND") && (
-                                    <Button size="sm" variant="outline" onClick={() => setEditingBrand(brand)} className="h-8 w-8 p-0"><Edit className="h-4 w-4" /></Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setEditingBrand(brand)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
                                   )}
                                   {hasPermission("DELETE_BRAND") && (
-                                    <Button size="sm" variant="destructive" onClick={() => setDeleteConfirm({ show: true, type: "brand", id: brand.id, name: brand.name })} className="h-8 w-8 p-0"><Trash2 className="h-4 w-4" /></Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() =>
+                                        setDeleteConfirm({ show: true, type: "brand", id: brand.id, name: brand.name })
+                                      }
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
                                   )}
                                 </>
                               )}
@@ -4470,7 +4485,6 @@ ${csvRows
                         <p className="text-slate-500 mt-2">IVA actual: {ivaPercentage}%</p>
                       </div>
                     )}
-
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -4499,11 +4513,7 @@ ${csvRows
                   </Card>
                 </div>
                 {hasPermission("VIEW_WHOLESALE") && (
-                  <MayoristasManagement
-                    inventory={inventory}
-                    suppliers={suppliers}
-                    brands={brands}
-                  />
+                  <MayoristasManagement inventory={inventory} suppliers={suppliers} brands={brands} />
                 )}
               </TabsContent>
 
@@ -4519,11 +4529,7 @@ ${csvRows
                   </Card>
                 </div>
                 {hasPermission("VIEW_WHOLESALE") && (
-                  <MayoristasBullpadelManagement
-                    inventory={inventory}
-                    suppliers={suppliers}
-                    brands={brands}
-                  />
+                  <MayoristasBullpadelManagement inventory={inventory} suppliers={suppliers} brands={brands} />
                 )}
               </TabsContent>
 
@@ -4538,9 +4544,7 @@ ${csvRows
                     </CardHeader>
                   </Card>
                 </div>
-                <VentasMinoristas
-                  inventory={inventory}
-                />
+                <VentasMinoristas inventory={inventory} />
               </TabsContent>
 
               <TabsContent value="purchases">
@@ -4558,9 +4562,7 @@ ${csvRows
               </TabsContent>
 
               <TabsContent value="gastos">
-                <GastosManagement
-                  onUpdateExpenses={updateCurrentMonthExpenses}
-                />
+                <GastosManagement onUpdateExpenses={updateCurrentMonthExpenses} />
               </TabsContent>
 
               <TabsContent value="notas-credito">
@@ -4772,7 +4774,10 @@ ${csvRows
                       <Select
                         value={editingItem.supplier_id?.toString() || "none"}
                         onValueChange={(value) =>
-                          setEditingItem({ ...editingItem, supplier_id: value === "none" ? null : Number.parseInt(value) })
+                          setEditingItem({
+                            ...editingItem,
+                            supplier_id: value === "none" ? null : Number.parseInt(value),
+                          })
                         }
                       >
                         <SelectTrigger>
@@ -4836,7 +4841,7 @@ ${csvRows
               </div>
             )}
 
-            {/* Modal para gestionar anuncios */}
+            {/* Modal de gestión de anuncios */}
             {showAnnouncementForm && getCurrentUser()?.role === "admin" && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                 <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
@@ -4891,7 +4896,10 @@ ${csvRows
             )}
 
             {/* Modal de alerta de cambio de precio */}
-            <AlertDialog open={priceAlert.show} onOpenChange={(open) => !open && setPriceAlert(prev => ({ ...prev, show: false }))}>
+            <AlertDialog
+              open={priceAlert.show}
+              onOpenChange={(open) => !open && setPriceAlert((prev) => ({ ...prev, show: false }))}
+            >
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Cambio de Precio Detectado</AlertDialogTitle>
@@ -4915,26 +4923,38 @@ ${csvRows
 
                         <div className="text-center">
                           <p className="text-sm text-gray-500 mb-1">Nuevo Precio</p>
-                          <p className="text-xl font-bold text-blue-600">{priceAlert.newPrice ? formatCurrency(priceAlert.newPrice) : "-"}</p>
+                          <p className="text-xl font-bold text-blue-600">
+                            {priceAlert.newPrice ? formatCurrency(priceAlert.newPrice) : "-"}
+                          </p>
                         </div>
                       </div>
 
                       <div className="flex justify-between items-center pt-2 border-t">
                         <span className="text-slate-500">Variación:</span>
-                        <Badge variant={priceAlert.newPrice > priceAlert.oldPrice ? "destructive" : "default"} className={priceAlert.newPrice > priceAlert.oldPrice ? "bg-red-500" : "bg-green-500"}>
+                        <Badge
+                          variant={priceAlert.newPrice > priceAlert.oldPrice ? "destructive" : "default"}
+                          className={priceAlert.newPrice > priceAlert.oldPrice ? "bg-red-500" : "bg-green-500"}
+                        >
                           {priceAlert.oldPrice > 0 ? (
                             <>
                               {priceAlert.newPrice > priceAlert.oldPrice ? "+" : "-"}
-                              {Math.abs(((priceAlert.newPrice - priceAlert.oldPrice) / priceAlert.oldPrice) * 100).toFixed(2)}%
+                              {Math.abs(
+                                ((priceAlert.newPrice - priceAlert.oldPrice) / priceAlert.oldPrice) * 100,
+                              ).toFixed(2)}
+                              %
                             </>
-                          ) : "N/A"}
+                          ) : (
+                            "N/A"
+                          )}
                         </Badge>
                       </div>
                     </div>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel onClick={() => setPriceAlert({ ...priceAlert, show: false })}>Cancelar</AlertDialogCancel>
+                  <AlertDialogCancel onClick={() => setPriceAlert({ ...priceAlert, show: false })}>
+                    Cancelar
+                  </AlertDialogCancel>
                   <AlertDialogAction onClick={confirmPriceChange}>Confirmar y Guardar</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -4980,7 +5000,9 @@ ${csvRows
                           <span>Fac: {item.invoice_number || "-"}</span>
                         </div>
                         <div className="flex justify-between items-center mb-2">
-                          <span className="font-medium text-sm text-slate-700">{item.suppliers?.name || "Sin proveedor"}</span>
+                          <span className="font-medium text-sm text-slate-700">
+                            {item.suppliers?.name || "Sin proveedor"}
+                          </span>
                           <Badge variant="outline">{item.quantity} un.</Badge>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs border-t pt-2 border-slate-200">
@@ -5165,13 +5187,16 @@ ${csvRows
       </div>
 
       {/* Bulk Edit Modal */}
-      <Dialog open={bulkEditModal.show} onOpenChange={(open) => !open && setBulkEditModal({ ...bulkEditModal, show: false })}>
+      <Dialog
+        open={bulkEditModal.show}
+        onOpenChange={(open) => !open && setBulkEditModal({ ...bulkEditModal, show: false })}
+      >
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Edición Masiva ({selectedItems.length} items)</DialogTitle>
             <DialogDescription>
-              Los cambios realizados afectarán a todos los elementos seleccionados.
-              Deje los campos en blanco o sin selección para no modificarlos.
+              Los cambios realizados afectarán a todos los elementos seleccionados. Deje los campos en blanco o sin
+              selección para no modificarlos.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -5180,9 +5205,13 @@ ${csvRows
                 <Label>Estado Stock</Label>
                 <Select
                   value={bulkEditModal.updates.stock_status}
-                  onValueChange={(val) => setBulkEditModal(prev => ({ ...prev, updates: { ...prev.updates, stock_status: val } }))}
+                  onValueChange={(val) =>
+                    setBulkEditModal((prev) => ({ ...prev, updates: { ...prev.updates, stock_status: val } }))
+                  }
                 >
-                  <SelectTrigger><SelectValue placeholder="No cambiar" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="No cambiar" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="normal">Normal</SelectItem>
                     <SelectItem value="missing">Faltó mercadería</SelectItem>
@@ -5194,9 +5223,13 @@ ${csvRows
                 <Label>Empresa</Label>
                 <Select
                   value={bulkEditModal.updates.company}
-                  onValueChange={(val) => setBulkEditModal(prev => ({ ...prev, updates: { ...prev.updates, company: val } }))}
+                  onValueChange={(val) =>
+                    setBulkEditModal((prev) => ({ ...prev, updates: { ...prev.updates, company: val } }))
+                  }
                 >
-                  <SelectTrigger><SelectValue placeholder="No cambiar" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="No cambiar" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="MAYCAM">MAYCAM</SelectItem>
                     <SelectItem value="BLUE DOGO">BLUE DOGO</SelectItem>
@@ -5211,9 +5244,13 @@ ${csvRows
                 <Label>Canal</Label>
                 <Select
                   value={bulkEditModal.updates.channel}
-                  onValueChange={(val) => setBulkEditModal(prev => ({ ...prev, updates: { ...prev.updates, channel: val } }))}
+                  onValueChange={(val) =>
+                    setBulkEditModal((prev) => ({ ...prev, updates: { ...prev.updates, channel: val } }))
+                  }
                 >
-                  <SelectTrigger><SelectValue placeholder="No cambiar" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="No cambiar" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="A">Canal A</SelectItem>
                     <SelectItem value="B">Canal B</SelectItem>
@@ -5224,12 +5261,20 @@ ${csvRows
                 <Label>Proveedor</Label>
                 <Select
                   value={bulkEditModal.updates.supplier_id}
-                  onValueChange={(val) => setBulkEditModal(prev => ({ ...prev, updates: { ...prev.updates, supplier_id: val } }))}
+                  onValueChange={(val) =>
+                    setBulkEditModal((prev) => ({ ...prev, updates: { ...prev.updates, supplier_id: val } }))
+                  }
                 >
-                  <SelectTrigger><SelectValue placeholder="No cambiar" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="No cambiar" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sin proveedor</SelectItem>
-                    {suppliers.map(s => <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>)}
+                    {suppliers.map((s) => (
+                      <SelectItem key={s.id} value={s.id.toString()}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -5239,23 +5284,32 @@ ${csvRows
               <Label>Marca</Label>
               <Select
                 value={bulkEditModal.updates.brand_id}
-                onValueChange={(val) => setBulkEditModal(prev => ({ ...prev, updates: { ...prev.updates, brand_id: val } }))}
+                onValueChange={(val) =>
+                  setBulkEditModal((prev) => ({ ...prev, updates: { ...prev.updates, brand_id: val } }))
+                }
               >
-                <SelectTrigger><SelectValue placeholder="No cambiar" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="No cambiar" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sin marca</SelectItem>
-                  {brands.map(b => <SelectItem key={b.id} value={b.id.toString()}>{b.name}</SelectItem>)}
+                  {brands.map((b) => (
+                    <SelectItem key={b.id} value={b.id.toString()}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setBulkEditModal({ ...bulkEditModal, show: false })}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setBulkEditModal({ ...bulkEditModal, show: false })}>
+              Cancelar
+            </Button>
             <Button onClick={handleBulkUpdate}>Aplicar Cambios</Button>
           </div>
         </DialogContent>
       </Dialog>
-
     </SidebarProvider>
   )
 }
