@@ -221,10 +221,10 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
   // Estados para filtros de pedidos
   const [orderFilters, setOrderFilters] = useState({
     cliente: "",
-    vendedor: "",
-    estado: "",
-    pagado: "",
-    cobrado: "",
+    vendedor: "todos",
+    estado: "todos",
+    pagado: "todos",
+    cobrado: "todos",
     fechaInicio: "",
     fechaFin: "",
   })
@@ -2737,9 +2737,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
 
               <Select
                 value={orderFilters.vendedor || undefined}
-                onValueChange={(val) =>
-                  setOrderFilters((prev) => ({ ...prev, vendedor: val === "todos" ? "" : val }))
-                }
+                onValueChange={(val) => setOrderFilters((prev) => ({ ...prev, vendedor: val }))}
               >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Vendedor" />
@@ -2756,9 +2754,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
 
               <Select
                 value={orderFilters.estado || undefined}
-                onValueChange={(val) =>
-                  setOrderFilters((prev) => ({ ...prev, estado: val === "todos" ? "" : val }))
-                }
+                onValueChange={(val) => setOrderFilters((prev) => ({ ...prev, estado: val }))}
               >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Estado" />
@@ -2775,9 +2771,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
 
               <Select
                 value={orderFilters.pagado || undefined}
-                onValueChange={(val) =>
-                  setOrderFilters((prev) => ({ ...prev, pagado: val === "todos" ? "" : val }))
-                }
+                onValueChange={(val) => setOrderFilters((prev) => ({ ...prev, pagado: val }))}
               >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Pagado" />
@@ -2791,9 +2785,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
 
               <Select
                 value={orderFilters.cobrado || undefined}
-                onValueChange={(val) =>
-                  setOrderFilters((prev) => ({ ...prev, cobrado: val === "todos" ? "" : val }))
-                }
+                onValueChange={(val) => setOrderFilters((prev) => ({ ...prev, cobrado: val }))}
               >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Cobrado" />
@@ -2829,7 +2821,15 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                 variant="ghost"
                 size="sm"
                 onClick={() =>
-                  setOrderFilters({ cliente: "", vendedor: "", estado: "", pagado: "", cobrado: "", fechaInicio: "", fechaFin: "" })
+                  setOrderFilters({
+                    cliente: "",
+                    vendedor: "todos",
+                    estado: "todos",
+                    pagado: "todos",
+                    cobrado: "todos",
+                    fechaInicio: "",
+                    fechaFin: "",
+                  })
                 }
               >
               <Filter className="w-4 h-4 mr-2" />
@@ -2838,16 +2838,14 @@ Este reporte contiene información confidencial y está destinado únicamente pa
             </div>
 
             <div className="mt-4 flex flex-col items-start">
-              <div className="rounded-xl bg-blue-600 text-white p-4 w-64 h-64 flex flex-col justify-between">
-                <div>
-                  <div className="text-sm">Total a cobrar faltante</div>
-                  <div className="text-2xl font-bold mt-1">{formatCurrency(totalPorCobrarFaltante)}</div>
+              <div className="rounded-xl bg-blue-600 text-white px-4 py-3 h-20 w-72 flex flex-col justify-center gap-1">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-sm font-medium">A cobrar</span>
+                  <span className="text-lg font-semibold">{formatCurrency(totalPorCobrarFaltante)}</span>
                 </div>
-                <div className="text-xs space-y-1">
-                  <div>Total por cobrar: {formatCurrency(totalPorCobrarBase)}</div>
-                  <div>
-                    Cálculo: {formatCurrency(totalPorCobrarBase)} × 5% = {formatCurrency(totalPorCobrarFaltante)}
-                  </div>
+                <div className="text-[11px] leading-tight">
+                  <div>Pedidos por cobrar: {formatCurrency(totalPorCobrarBase)}</div>
+                  <div>5% de pedidos: {formatCurrency(totalPorCobrarFaltante)}</div>
                 </div>
               </div>
               {!isReadOnly && (
@@ -2886,13 +2884,21 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                             const matchesClient =
                               !orderFilters.cliente ||
                               clientName.toLowerCase().includes(orderFilters.cliente.toLowerCase())
-                            const matchesVendor = !orderFilters.vendedor || order.vendor === orderFilters.vendedor
-                            const matchesEstado = !orderFilters.estado || order.status === orderFilters.estado
+                            const matchesVendor =
+                              !orderFilters.vendedor ||
+                              orderFilters.vendedor === "todos" ||
+                              order.vendor === orderFilters.vendedor
+                            const matchesEstado =
+                              !orderFilters.estado ||
+                              orderFilters.estado === "todos" ||
+                              order.status === orderFilters.estado
                             const matchesPagado =
                               !orderFilters.pagado ||
+                              orderFilters.pagado === "todos" ||
                               (orderFilters.pagado === "pagado" ? order.is_paid : !order.is_paid)
                             const matchesCobrado =
                               !orderFilters.cobrado ||
+                              orderFilters.cobrado === "todos" ||
                               (orderFilters.cobrado === "cobrado"
                                 ? order.collection_status === "collected"
                                 : order.collection_status === "to_collect")
