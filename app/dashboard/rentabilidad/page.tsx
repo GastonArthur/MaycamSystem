@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react"
 import { checkSession } from "@/lib/auth"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
-import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -498,16 +497,6 @@ export default function RentabilidadPage() {
 
   return (
     <SidebarProvider>
-      <AppSidebar 
-        activeTab={sidebarActiveTab}
-        setActiveTab={handleSidebarNavigation}
-        setShowWholesale={handleShowWholesale}
-        setShowRetail={handleShowRetail}
-        setShowGastos={handleShowGastos}
-        setShowClients={handleShowClients}
-        onLogout={async () => { await logout(); router.push("/login") }} 
-        userEmail={userEmail} 
-      />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
