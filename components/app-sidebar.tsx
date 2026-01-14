@@ -169,7 +169,16 @@ export function AppSidebar({
                 <SidebarMenuItem>
                   <button
                     className="w-full flex items-center h-11 px-3 rounded-none bg-transparent text-white transition-colors border-none group-data-[collapsible=icon]:hidden"
-                    onClick={() => setCatalogosOpen((v) => !v)}
+                    onClick={() => {
+                      if (!catalogosOpen) {
+                        setCatalogosOpen(true)
+                        setGestionOpen(false)
+                        setVentasOpen(false)
+                        setFinanzasOpen(false)
+                      } else {
+                        setCatalogosOpen(false)
+                      }
+                    }}
                   >
                     <span className="text-xs font-semibold uppercase tracking-wide">Monitoreo de precios</span>
                     {catalogosOpen ? (
@@ -221,7 +230,16 @@ export function AppSidebar({
                   <SidebarMenuItem>
                     <button
                       className="w-full flex items-center h-11 px-3 rounded-none bg-transparent text-white transition-colors border-none group-data-[collapsible=icon]:hidden"
-                      onClick={() => setGestionOpen((v) => !v)}
+                      onClick={() => {
+                        if (!gestionOpen) {
+                          setGestionOpen(true)
+                          setCatalogosOpen(false)
+                          setVentasOpen(false)
+                          setFinanzasOpen(false)
+                        } else {
+                          setGestionOpen(false)
+                        }
+                      }}
                     >
                       <span className="text-xs font-semibold uppercase tracking-wide">Configuración</span>
                       {gestionOpen ? (
@@ -286,7 +304,16 @@ export function AppSidebar({
                   <SidebarMenuItem>
                     <button
                       className="w-full flex items-center h-11 px-3 rounded-none bg-transparent text-white transition-colors border-none group-data-[collapsible=icon]:hidden"
-                      onClick={() => setVentasOpen((v) => !v)}
+                      onClick={() => {
+                        if (!ventasOpen) {
+                          setVentasOpen(true)
+                          setCatalogosOpen(false)
+                          setGestionOpen(false)
+                          setFinanzasOpen(false)
+                        } else {
+                          setVentasOpen(false)
+                        }
+                      }}
                     >
                       <span className="text-xs font-semibold uppercase tracking-wide">Ventas</span>
                       {ventasOpen ? (
@@ -345,7 +372,16 @@ export function AppSidebar({
                   <SidebarMenuItem>
                     <button
                   className="w-full flex items-center h-11 px-3 rounded-none bg-transparent text-white transition-colors border-none group-data-[collapsible=icon]:hidden"
-                  onClick={() => setFinanzasOpen((v) => !v)}
+                  onClick={() => {
+                    if (!finanzasOpen) {
+                      setFinanzasOpen(true)
+                      setCatalogosOpen(false)
+                      setGestionOpen(false)
+                      setVentasOpen(false)
+                    } else {
+                      setFinanzasOpen(false)
+                    }
+                  }}
                     >
                       <span className="text-xs font-semibold uppercase tracking-wide">Finanzas</span>
                       {finanzasOpen ? (
