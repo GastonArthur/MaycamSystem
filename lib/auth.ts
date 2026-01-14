@@ -152,7 +152,7 @@ export const login = async (
     // Verificar credenciales en base de datos con mejor rendimiento
     const { data: user, error } = await supabase
       .from("users")
-      .select("id, email, name, role, is_active, can_view_logs, can_view_wholesale, can_view_rentabilidad, can_view_precios, created_at, password_hash")
+      .select("*")
       .eq("email", email.toLowerCase().trim())
       .eq("is_active", true)
       .maybeSingle()
@@ -385,9 +385,7 @@ export const checkSession = async (): Promise<User | null> => {
       .from("user_sessions")
       .select(`
         expires_at,
-        users!inner (
-          id, email, name, role, is_active, can_view_logs, can_view_wholesale, can_view_rentabilidad, can_view_precios, created_at
-        )
+        users!inner (*)
       `)
       .eq("session_token", sessionToken)
       .eq("users.is_active", true)
@@ -567,7 +565,7 @@ export const getUsers = async (): Promise<User[]> => {
   try {
     const { data, error } = await supabase
       .from("users")
-      .select("id, email, name, role, is_active, can_view_logs, can_view_wholesale, can_view_rentabilidad, can_view_precios, created_at")
+      .select("*")
       .order("name")
 
     if (error) throw error

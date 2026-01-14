@@ -19,6 +19,13 @@ import { Checkbox } from "@/components/ui/checkbox"
 
 type UserManagementProps = {}
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+
 const PERMISSION_GROUPS = [
   {
     id: "general",
@@ -692,49 +699,61 @@ export function UserManagement() {
             <DialogTitle>Permisos de {permissionsUser?.name}</DialogTitle>
             <DialogDescription>Configura los permisos de acceso a cada sección</DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-6">
-            {permissionsUser &&
-              PERMISSION_GROUPS.map((group, index) => {
-                const allChecked = group.permissions.every(
-                  (perm) => (permissionsUser as any)[perm.key] === true
-                )
-                const someChecked = group.permissions.some(
-                  (perm) => (permissionsUser as any)[perm.key] === true
-                )
-                const isIndeterminate = someChecked && !allChecked
+          <div className="py-4">
+            <Accordion
+              type="multiple"
+              defaultValue={PERMISSION_GROUPS.map((g) => g.id)}
+              className="space-y-4"
+            >
+              {permissionsUser &&
+                PERMISSION_GROUPS.map((group, index) => {
+                  const allChecked = group.permissions.every(
+                    (perm) => (permissionsUser as any)[perm.key] === true
+                  )
+                  const someChecked = group.permissions.some(
+                    (perm) => (permissionsUser as any)[perm.key] === true
+                  )
+                  const isIndeterminate = someChecked && !allChecked
 
-                return (
-                  <div key={group.id} className="border rounded-md p-4 bg-slate-50/50">
-                    <div className="flex items-center space-x-2 mb-3 pb-2 border-b border-slate-200">
-                      <Checkbox
-                        id={`group-${group.id}`}
-                        checked={allChecked}
-                        // We use a custom prop or ref for indeterminate state if supported, 
-                        // but standard Checkbox component might not support it directly via props.
-                        // Assuming standard behavior: checked or unchecked.
-                        onCheckedChange={(checked) => handleGroupPermissionChange(index, checked as boolean)}
-                      />
-                      <Label className="font-semibold text-slate-700">{group.title}</Label>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 pl-2">
-                      {group.permissions.map((perm) => (
-                        <div key={perm.key} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`perm-${permissionsUser.id}-${perm.key}`}
-                            checked={(permissionsUser as any)[perm.key] ?? true}
-                            onCheckedChange={(checked) => {
-                              handlePermissionChange(perm.key, checked as boolean)
-                            }}
-                          />
-                          <Label className="text-sm font-normal text-slate-600">
-                            {perm.label}
-                          </Label>
+                  return (
+                    <AccordionItem
+                      key={group.id}
+                      value={group.id}
+                      className="border rounded-md bg-slate-50/50 px-4"
+                    >
+                      <div className="flex items-center space-x-2 py-4">
+                        <Checkbox
+                          id={`group-${group.id}`}
+                          checked={allChecked}
+                          onCheckedChange={(checked) => handleGroupPermissionChange(index, checked as boolean)}
+                          className="mr-2"
+                        />
+                        <AccordionTrigger className="hover:no-underline py-0 flex-1">
+                          <span className="font-semibold text-slate-700 text-sm">{group.title}</span>
+                        </AccordionTrigger>
+                      </div>
+                      <AccordionContent className="pt-0 pb-4">
+                        <div className="grid grid-cols-2 gap-3 pl-8">
+                          {group.permissions.map((perm) => (
+                            <div key={perm.key} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`perm-${permissionsUser.id}-${perm.key}`}
+                                checked={(permissionsUser as any)[perm.key] ?? true}
+                                onCheckedChange={(checked) => {
+                                  handlePermissionChange(perm.key, checked as boolean)
+                                }}
+                              />
+                              <Label className="text-sm font-normal text-slate-600 cursor-pointer" htmlFor={`perm-${permissionsUser.id}-${perm.key}`}>
+                                {perm.label}
+                              </Label>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
+                      </AccordionContent>
+                    </AccordionItem>
+                  )
+                })}
+            </Accordion>
           </div>
           <div className="flex justify-end space-x-2 pt-4">
             <Button variant="secondary" onClick={() => setShowPermissionsDialog(false)}>
