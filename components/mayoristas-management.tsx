@@ -242,6 +242,37 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
     setShowVendorDialog(true)
   }
 
+  const handleAddVendor = async () => {
+    const name = newVendor.trim()
+    if (!name) return
+
+    if (isSupabaseConfigured) {
+      try {
+        const res = await fetch("/api/wholesale/vendors", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(json?.error || `Error ${res.status}`)
+        const data = json?.data
+        if (!data) throw new Error("Respuesta inválida del servidor")
+
+        setVendors((prev) => sortVendorsByName([...prev, data]))
+        setNewVendor("")
+        toast({ title: "Vendedor agregado", description: data.name })
+      } catch (error) {
+        logError("Error adding vendor:", error)
+        toast({ title: "Error", description: "No se pudo agregar el vendedor", variant: "destructive" })
+      }
+    } else {
+      const mockId = Date.now()
+      setVendors((prev) => sortVendorsByName([...prev, { id: mockId, name }]))
+      setNewVendor("")
+      toast({ title: "Vendedor agregado", description: name })
+    }
+  }
+
   const saveVendorEdit = async () => {
     if (!editingVendor) return
     const nextName = vendorNameDraft.trim()
@@ -3808,6 +3839,63 @@ Este reporte contiene información confidencial y está destinado únicamente pa
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="vendedores" className="space-y-4 h-[calc(95vh-200px)] overflow-y-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle>Gestión de Vendedores</CardTitle>
+                <CardDescription>Administre los vendedores mayoristas</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-4 mb-6">
+                  <Input
+                    placeholder="Nombre del nuevo vendedor"
+                    value={newVendor}
+                    onChange={(e) => setNewVendor(e.target.value)}
+                  />
+                  <Button onClick={handleAddVendor}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Agregar
+                  </Button>
+                </div>
+
+                <div className="border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead className="w-[100px]">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {vendors.map((vendor) => (
+                        <TableRow key={vendor.id}>
+                          <TableCell className="font-medium">{vendor.name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button variant="ghost" size="icon" onClick={() => openVendorEdit(vendor)}>
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => deleteVendor(vendor)}>
+                                <Trash2 className="w-4 h-4 text-red-500" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {vendors.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={2} className="text-center h-24 text-muted-foreground">
+                            No hay vendedores registrados
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
 
         {/* Modal para agregar cliente */}
@@ -3943,6 +4031,33 @@ Este reporte contiene información confidencial y está destinado únicamente pa
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Modal para editar vendedor */}
+        <Dialog open={showVendorDialog} onOpenChange={setShowVendorDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Vendedor</DialogTitle>
+              <DialogDescription>Modifique el nombre del vendedor</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Nombre</Label>
+                <Input
+                  value={vendorNameDraft}
+                  onChange={(e) => setVendorNameDraft(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowVendorDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={saveVendorEdit}>
+                  Guardar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

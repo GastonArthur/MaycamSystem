@@ -11,10 +11,6 @@ export type User = {
   is_active: boolean
   can_view_logs: boolean
   can_view_wholesale: boolean
-<<<<<<< HEAD
-  can_view_rentabilidad?: boolean
-  can_view_precios?: boolean
-=======
   can_view_dashboard: boolean
   can_view_products: boolean
   can_view_stock: boolean
@@ -30,7 +26,6 @@ export type User = {
   can_view_compras: boolean
   can_view_notas_credito: boolean
   can_view_users: boolean
->>>>>>> 9f38a1b448b268c7c46b4c51bb074d847b513f85
   created_at: string
   password_hash?: string
   two_factor_enabled?: boolean
@@ -66,10 +61,6 @@ const ADMIN_USER: User = {
   is_active: true,
   can_view_logs: true,
   can_view_wholesale: true,
-<<<<<<< HEAD
-  can_view_rentabilidad: true,
-  can_view_precios: true,
-=======
   can_view_dashboard: true,
   can_view_products: true,
   can_view_stock: true,
@@ -85,7 +76,6 @@ const ADMIN_USER: User = {
   can_view_compras: true,
   can_view_notas_credito: true,
   can_view_users: true,
->>>>>>> 9f38a1b448b268c7c46b4c51bb074d847b513f85
   created_at: new Date().toISOString(),
 }
 
@@ -595,6 +585,21 @@ export const createUser = async (userData: {
   role: "admin" | "user" | "viewer"
   can_view_logs?: boolean
   can_view_wholesale?: boolean
+  can_view_dashboard?: boolean
+  can_view_products?: boolean
+  can_view_stock?: boolean
+  can_view_precios?: boolean
+  can_view_zentor?: boolean
+  can_view_clients?: boolean
+  can_view_brands?: boolean
+  can_view_suppliers?: boolean
+  can_view_wholesale_bullpadel?: boolean
+  can_view_retail?: boolean
+  can_view_rentabilidad?: boolean
+  can_view_gastos?: boolean
+  can_view_compras?: boolean
+  can_view_notas_credito?: boolean
+  can_view_users?: boolean
 }): Promise<{ success: boolean; error?: string }> => {
   if (!isSupabaseConfigured) {
     // Verificar si el email ya existe
@@ -610,21 +615,21 @@ export const createUser = async (userData: {
       is_active: true,
       can_view_logs: userData.can_view_logs ?? userData.role === "admin",
       can_view_wholesale: userData.can_view_wholesale ?? userData.role === "admin",
-      can_view_dashboard: true,
-      can_view_products: true,
-      can_view_stock: true,
-      can_view_precios: true,
-      can_view_zentor: true,
-      can_view_clients: true,
-      can_view_brands: true,
-      can_view_suppliers: true,
-      can_view_wholesale_bullpadel: true,
-      can_view_retail: true,
-      can_view_rentabilidad: true,
-      can_view_gastos: true,
-      can_view_compras: true,
-      can_view_notas_credito: true,
-      can_view_users: true,
+      can_view_dashboard: userData.can_view_dashboard ?? userData.role === "admin",
+      can_view_products: userData.can_view_products ?? userData.role === "admin",
+      can_view_stock: userData.can_view_stock ?? userData.role === "admin",
+      can_view_precios: userData.can_view_precios ?? userData.role === "admin",
+      can_view_zentor: userData.can_view_zentor ?? userData.role === "admin",
+      can_view_clients: userData.can_view_clients ?? userData.role === "admin",
+      can_view_brands: userData.can_view_brands ?? userData.role === "admin",
+      can_view_suppliers: userData.can_view_suppliers ?? userData.role === "admin",
+      can_view_wholesale_bullpadel: userData.can_view_wholesale_bullpadel ?? userData.role === "admin",
+      can_view_retail: userData.can_view_retail ?? userData.role === "admin",
+      can_view_rentabilidad: userData.can_view_rentabilidad ?? userData.role === "admin",
+      can_view_gastos: userData.can_view_gastos ?? userData.role === "admin",
+      can_view_compras: userData.can_view_compras ?? userData.role === "admin",
+      can_view_notas_credito: userData.can_view_notas_credito ?? userData.role === "admin",
+      can_view_users: userData.can_view_users ?? userData.role === "admin",
       created_at: new Date().toISOString(),
     }
     OFFLINE_USERS.push(newUser)
@@ -646,21 +651,21 @@ export const createUser = async (userData: {
           role: userData.role,
           can_view_logs: userData.can_view_logs ?? userData.role === "admin",
           can_view_wholesale: userData.can_view_wholesale ?? userData.role === "admin",
-          can_view_dashboard: true,
-          can_view_products: true,
-          can_view_stock: true,
-          can_view_precios: true,
-          can_view_zentor: true,
-          can_view_clients: true,
-          can_view_brands: true,
-          can_view_suppliers: true,
-          can_view_wholesale_bullpadel: true,
-          can_view_retail: true,
-          can_view_rentabilidad: true,
-          can_view_gastos: true,
-          can_view_compras: true,
-          can_view_notas_credito: true,
-          can_view_users: true,
+          can_view_dashboard: userData.can_view_dashboard ?? userData.role === "admin",
+          can_view_products: userData.can_view_products ?? userData.role === "admin",
+          can_view_stock: userData.can_view_stock ?? userData.role === "admin",
+          can_view_precios: userData.can_view_precios ?? userData.role === "admin",
+          can_view_zentor: userData.can_view_zentor ?? userData.role === "admin",
+          can_view_clients: userData.can_view_clients ?? userData.role === "admin",
+          can_view_brands: userData.can_view_brands ?? userData.role === "admin",
+          can_view_suppliers: userData.can_view_suppliers ?? userData.role === "admin",
+          can_view_wholesale_bullpadel: userData.can_view_wholesale_bullpadel ?? userData.role === "admin",
+          can_view_retail: userData.can_view_retail ?? userData.role === "admin",
+          can_view_rentabilidad: userData.can_view_rentabilidad ?? userData.role === "admin",
+          can_view_gastos: userData.can_view_gastos ?? userData.role === "admin",
+          can_view_compras: userData.can_view_compras ?? userData.role === "admin",
+          can_view_notas_credito: userData.can_view_notas_credito ?? userData.role === "admin",
+          can_view_users: userData.can_view_users ?? userData.role === "admin",
           created_by: getCurrentUser()?.id,
         },
       ])

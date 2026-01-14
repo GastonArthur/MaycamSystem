@@ -1,5 +1,5 @@
 -- MASTER DATABASE SETUP SCRIPT FOR SISTEMA 2026
--- This script sets up the entire database schema, including users, inventory, expenses, and wholesale management.
+-- This script sets up the entire database schema, including users, inventory, expenses, wholesale management, and profitability modules.
 -- Run this script in the Supabase SQL Editor to initialize your database.
 
 -- 1. Enable Extensions
@@ -21,6 +21,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION auto_cleanup_sessions()
+RETURNS void AS $$
+BEGIN
+  DELETE FROM user_sessions WHERE expires_at < NOW() - INTERVAL '1 day';
+END;
+$$ LANGUAGE plpgsql;
+
 -- 3. Users and Auth (Custom Implementation)
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
@@ -33,11 +40,31 @@ CREATE TABLE IF NOT EXISTS users (
   can_view_wholesale BOOLEAN DEFAULT false,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_by INTEGER REFERENCES users(id)
+  updated_by INTEGER REFERENCES users(id),
+  -- 2FA Columns
+  phone VARCHAR(50),
+  two_factor_method VARCHAR(20) DEFAULT 'app', -- 'app', 'sms', 'email'
+  two_factor_code VARCHAR(10),
+  two_factor_expires TIMESTAMP WITH TIME ZONE
 );
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS can_view_rentabilidad BOOLEAN DEFAULT false;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS can_view_precios BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_view_dashboard BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_view_products BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_view_stock BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_view_zentor BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_view_clients BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_view_brands BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_view_suppliers BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_view_wholesale_bullpadel BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_view_retail BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_view_gastos BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_view_compras BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_view_notas_credito BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_view_users BOOLEAN DEFAULT false;
+
+CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
 
 CREATE TABLE IF NOT EXISTS user_sessions (
   id SERIAL PRIMARY KEY,
@@ -51,6 +78,16 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 
 CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(session_token);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_expires ON user_sessions(expires_at);
+
+CREATE TABLE IF NOT EXISTS user_preferences (
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  key TEXT NOT NULL,
+  value JSONB NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  PRIMARY KEY (user_id, key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_preferences_user ON user_preferences(user_id);
 
 -- 4. Activity Logs
 CREATE TABLE IF NOT EXISTS activity_logs (
@@ -72,6 +109,7 @@ CREATE TABLE IF NOT EXISTS activity_logs (
 CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_action ON activity_logs(action);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_user_action ON activity_logs(user_id, action);
 
 -- 5. Configuration
 CREATE TABLE IF NOT EXISTS config (
@@ -88,12 +126,16 @@ CREATE TABLE IF NOT EXISTS config (
 );
 
 -- Insert default config
-INSERT INTO config (id, iva_percentage, wholesale_percentage_1, wholesale_percentage_2, wholesale_percentage_3) 
-VALUES (1, 21.00, 10.00, 17.00, 25.00) 
+INSERT INTO config (id, iva_percentage, wholesale_percentage_1, wholesale_percentage_2, wholesale_percentage_3, cuotas_3_percentage, cuotas_6_percentage, cuotas_9_percentage, cuotas_12_percentage) 
+VALUES (1, 21.00, 10.00, 17.00, 25.00, 20, 40, 60, 80) 
 ON CONFLICT (id) DO UPDATE SET
   wholesale_percentage_1 = EXCLUDED.wholesale_percentage_1,
   wholesale_percentage_2 = EXCLUDED.wholesale_percentage_2,
-  wholesale_percentage_3 = EXCLUDED.wholesale_percentage_3;
+  wholesale_percentage_3 = EXCLUDED.wholesale_percentage_3,
+  cuotas_3_percentage = EXCLUDED.cuotas_3_percentage,
+  cuotas_6_percentage = EXCLUDED.cuotas_6_percentage,
+  cuotas_9_percentage = EXCLUDED.cuotas_9_percentage,
+  cuotas_12_percentage = EXCLUDED.cuotas_12_percentage;
 
 -- 6. Core Inventory Tables
 CREATE TABLE IF NOT EXISTS suppliers (
@@ -193,11 +235,18 @@ CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date);
 CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_created_by ON expenses(created_by);
 CREATE INDEX IF NOT EXISTS idx_expenses_paid_by ON expenses(paid_by);
+CREATE INDEX IF NOT EXISTS idx_recurring_expenses_next_run ON recurring_expenses(next_run_date);
 
 -- Triggers for updated_at
 DROP TRIGGER IF EXISTS update_expenses_updated_at ON expenses;
 CREATE TRIGGER update_expenses_updated_at
   BEFORE UPDATE ON expenses
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_recurring_expenses_updated_at ON recurring_expenses;
+CREATE TRIGGER update_recurring_expenses_updated_at
+  BEFORE UPDATE ON recurring_expenses
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
@@ -265,6 +314,7 @@ CREATE TABLE IF NOT EXISTS wholesale_orders (
     status TEXT CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')) DEFAULT 'pending',
     is_paid BOOLEAN DEFAULT FALSE,
     collection_status TEXT DEFAULT 'to_collect',
+    vendor TEXT,
     CONSTRAINT wholesale_orders_collection_status_chk CHECK (collection_status IN ('to_collect','collected')),
     total_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
     notes TEXT,
@@ -273,9 +323,11 @@ CREATE TABLE IF NOT EXISTS wholesale_orders (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Ensure is_paid column exists (for updates)
+-- Ensure columns exist (for updates)
 ALTER TABLE wholesale_orders ADD COLUMN IF NOT EXISTS is_paid BOOLEAN DEFAULT FALSE;
 ALTER TABLE wholesale_orders ADD COLUMN IF NOT EXISTS collection_status TEXT DEFAULT 'to_collect';
+ALTER TABLE wholesale_orders ADD COLUMN IF NOT EXISTS vendor TEXT;
+
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -325,24 +377,183 @@ CREATE TABLE IF NOT EXISTS retail_clients (
 CREATE INDEX IF NOT EXISTS idx_retail_clients_dni_cuit ON retail_clients(dni_cuit);
 CREATE INDEX IF NOT EXISTS idx_retail_clients_name ON retail_clients(name);
 
--- 9. Initial Data Seed (Admin User)
--- Password: maycamadmin2025!
-INSERT INTO users (email, name, password_hash, role, is_active, can_view_logs, can_view_wholesale) 
-VALUES (
-  'maycamadmin@maycam.com', 
-  'Administrador MAYCAM', 
-  '$2b$12$LQv3c1yAvFnpsIjcLMTuNOHHDJkqP.TaP0gs2GuqbG5vMw/aO.Uy6', 
-  'admin', 
-  true, 
-  true,
-  true
-) ON CONFLICT (email) DO UPDATE SET
-  role = 'admin',
-  is_active = true,
-  can_view_logs = true,
-  can_view_wholesale = true;
+-- 9. Credit Notes Module
+CREATE TABLE IF NOT EXISTS credit_notes (
+  id SERIAL PRIMARY KEY,
+  number TEXT NOT NULL,
+  supplier TEXT NOT NULL,
+  items_count INTEGER NOT NULL DEFAULT 1,
+  total NUMERIC(10,2) NOT NULL DEFAULT 0,
+  date DATE NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('disponible','utilizada')) DEFAULT 'disponible',
+  description TEXT,
+  image_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
--- 10. Stock Management
+CREATE INDEX IF NOT EXISTS idx_credit_notes_number ON credit_notes(number);
+CREATE INDEX IF NOT EXISTS idx_credit_notes_supplier ON credit_notes(supplier);
+CREATE INDEX IF NOT EXISTS idx_credit_notes_date ON credit_notes(date);
+
+-- 10. Rentabilidad Real Module
+-- 10.1 ML Accounts
+CREATE TABLE IF NOT EXISTS rt_ml_accounts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  seller_id BIGINT UNIQUE,
+  refresh_token TEXT NOT NULL,
+  access_token TEXT,
+  access_expires_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 10.2 SKU Mapping
+CREATE TABLE IF NOT EXISTS rt_ml_sku_map (
+  account_id UUID REFERENCES rt_ml_accounts(id),
+  sku TEXT NOT NULL,
+  item_id TEXT NOT NULL,
+  variation_id BIGINT,
+  last_resolved_at TIMESTAMP WITH TIME ZONE,
+  last_error TEXT,
+  PRIMARY KEY (account_id, sku)
+);
+
+-- 10.3 Stock (Updated with title and thumbnail)
+CREATE TABLE IF NOT EXISTS rt_stock_current (
+  account_id UUID REFERENCES rt_ml_accounts(id),
+  sku TEXT NOT NULL,
+  qty INTEGER, -- null = not published/found
+  status TEXT, -- "Stock"|"Sin stock"|"No publicado"
+  title TEXT,
+  thumbnail TEXT,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  PRIMARY KEY (account_id, sku)
+);
+
+CREATE TABLE IF NOT EXISTS rt_stock_history (
+  id SERIAL PRIMARY KEY,
+  account_id UUID REFERENCES rt_ml_accounts(id),
+  sku TEXT NOT NULL,
+  qty INTEGER,
+  status TEXT,
+  payload JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 10.4 Orders Raw (MercadoLibre)
+CREATE TABLE IF NOT EXISTS rt_ml_orders (
+  account_id UUID REFERENCES rt_ml_accounts(id),
+  order_id BIGINT NOT NULL,
+  status TEXT,
+  date_created TIMESTAMP WITH TIME ZONE,
+  total_amount NUMERIC(20, 2),
+  paid_amount NUMERIC(20, 2),
+  buyer_id BIGINT,
+  shipment_id BIGINT,
+  payment_ids JSONB,
+  raw JSONB,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  PRIMARY KEY (account_id, order_id)
+);
+
+CREATE TABLE IF NOT EXISTS rt_ml_order_items (
+  id SERIAL PRIMARY KEY,
+  account_id UUID REFERENCES rt_ml_accounts(id),
+  order_id BIGINT,
+  sku TEXT,
+  item_id TEXT,
+  variation_id BIGINT,
+  title TEXT,
+  quantity INTEGER,
+  unit_price NUMERIC(20, 2),
+  discount NUMERIC(20, 2),
+  raw JSONB,
+  FOREIGN KEY (account_id, order_id) REFERENCES rt_ml_orders(account_id, order_id)
+);
+
+-- 10.5 Internal Sales Normalization (Generic Sales Model)
+CREATE TABLE IF NOT EXISTS rt_sales (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  channel TEXT NOT NULL, -- 'ML', etc.
+  account_id UUID REFERENCES rt_ml_accounts(id),
+  external_order_id TEXT,
+  status TEXT,
+  sold_at TIMESTAMP WITH TIME ZONE,
+  gross_income NUMERIC(20, 2),
+  net_income NUMERIC(20, 2),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(channel, account_id, external_order_id)
+);
+
+CREATE TABLE IF NOT EXISTS rt_sale_items (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sale_id UUID REFERENCES rt_sales(id),
+  sku TEXT,
+  qty INTEGER,
+  sale_unit_price NUMERIC(20, 2),
+  sale_unit_discount NUMERIC(20, 2),
+  cost_unit_at_sale NUMERIC(20, 2), -- Historical Cost Snapshot
+  product_name_snapshot TEXT
+);
+
+-- 10.6 Profitability Calculation
+CREATE TABLE IF NOT EXISTS rt_sale_profit (
+  sale_id UUID PRIMARY KEY REFERENCES rt_sales(id),
+  gross_income NUMERIC(20, 2),
+  cogs NUMERIC(20, 2),
+  total_charges NUMERIC(20, 2),
+  real_profit NUMERIC(20, 2),
+  profit_pct NUMERIC(10, 4), -- 0.15 = 15%
+  computed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS rt_sale_charges (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sale_id UUID REFERENCES rt_sales(id),
+  type TEXT NOT NULL, -- ml_fee, financing_fee, shipping_cost, etc.
+  amount NUMERIC(20, 2),
+  source TEXT, -- ml_billing, mp_report, manual
+  external_ref TEXT, -- unique reference from source
+  occurred_at TIMESTAMP WITH TIME ZONE,
+  raw JSONB,
+  UNIQUE(external_ref)
+);
+
+-- 10.7 Jobs (Sync State)
+CREATE TABLE IF NOT EXISTS rt_jobs (
+  name TEXT PRIMARY KEY,
+  cursor JSONB,
+  locked_at TIMESTAMP WITH TIME ZONE,
+  last_error TEXT,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 10.8 Simulator (Pricing Plans)
+CREATE TABLE IF NOT EXISTS rt_pricing_plans (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  account_id UUID REFERENCES rt_ml_accounts(id),
+  plan TEXT, -- "SIN", "3", "6", "9", "12"
+  markup_pct NUMERIC(10, 4),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 10.9 Shadow Products (Fallback if no inventory table exists)
+CREATE TABLE IF NOT EXISTS rt_products_shadow (
+  sku TEXT PRIMARY KEY,
+  cost_unit NUMERIC(20, 2),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for Rentabilidad Module
+CREATE INDEX IF NOT EXISTS idx_rt_ml_sku_map_sku ON rt_ml_sku_map(sku);
+CREATE INDEX IF NOT EXISTS idx_rt_ml_orders_date ON rt_ml_orders(date_created);
+CREATE INDEX IF NOT EXISTS idx_rt_sales_sold_at ON rt_sales(sold_at);
+CREATE INDEX IF NOT EXISTS idx_rt_sale_items_sku ON rt_sale_items(sku);
+CREATE INDEX IF NOT EXISTS idx_rt_sale_charges_sale_id ON rt_sale_charges(sale_id);
+
+-- 11. Stock Management (Simple Stock)
 CREATE TABLE IF NOT EXISTS stock_brands (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
@@ -400,8 +611,59 @@ BEGIN
   END IF;
 END $$;
 
--- 11. Maintenance
--- VACUUM ANALYZE; -- Commented out because it cannot run inside a transaction block in Supabase SQL Editor
+-- 12. Initial Data Seed
+-- Admin User
+INSERT INTO users (
+  email, name, password_hash, role, is_active, 
+  can_view_logs, can_view_wholesale, can_view_dashboard, can_view_products, 
+  can_view_stock, can_view_rentabilidad, can_view_precios, can_view_zentor, 
+  can_view_clients, can_view_brands, can_view_suppliers, can_view_wholesale_bullpadel, 
+  can_view_retail, can_view_gastos, can_view_compras, can_view_notas_credito, can_view_users
+) 
+VALUES (
+  'maycamadmin@maycam.com', 
+  'Administrador MAYCAM', 
+  '$2b$12$LQv3c1yAvFnpsIjcLMTuNOHHDJkqP.TaP0gs2GuqbG5vMw/aO.Uy6', -- maycamadmin2025!
+  'admin', 
+  true, 
+  true, true, true, true, 
+  true, true, true, true, 
+  true, true, true, true, 
+  true, true, true, true, true
+) ON CONFLICT (email) DO UPDATE SET
+  role = 'admin',
+  is_active = true,
+  can_view_logs = true,
+  can_view_wholesale = true,
+  can_view_dashboard = true,
+  can_view_products = true,
+  can_view_stock = true,
+  can_view_rentabilidad = true,
+  can_view_precios = true,
+  can_view_zentor = true,
+  can_view_clients = true,
+  can_view_brands = true,
+  can_view_suppliers = true,
+  can_view_wholesale_bullpadel = true,
+  can_view_retail = true,
+  can_view_gastos = true,
+  can_view_compras = true,
+  can_view_notas_credito = true,
+  can_view_users = true;
+
+-- Basic Suppliers
+INSERT INTO suppliers (name) VALUES 
+  ('PROVEEDOR PRINCIPAL'),
+  ('DISTRIBUIDOR NACIONAL'),
+  ('IMPORTADOR DIRECTO')
+ON CONFLICT (name) DO NOTHING;
+
+-- Basic Brands
+INSERT INTO brands (name) VALUES 
+  ('MARCA PREMIUM'),
+  ('MARCA ESTÁNDAR'),
+  ('MARCA ECONÓMICA')
+ON CONFLICT (name) DO NOTHING;
 
 -- Log the setup
 INSERT INTO activity_logs (
@@ -412,3 +674,5 @@ SELECT
 FROM users 
 WHERE email = 'maycamadmin@maycam.com'
 LIMIT 1;
+
+NOTIFY pgrst, 'reload config';

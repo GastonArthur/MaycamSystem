@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY
     if (!supabaseUrl || !supabaseKey) {
+      console.error("Supabase config missing:", { url: !!supabaseUrl, key: !!supabaseKey })
       return NextResponse.json({ error: "Supabase no está configurado" }, { status: 500 })
     }
     const supabase = createClient(supabaseUrl, supabaseKey)

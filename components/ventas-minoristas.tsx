@@ -26,6 +26,9 @@ import { toast } from "@/hooks/use-toast"
 import { getCurrentUser, logActivity } from "@/lib/auth"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { logError } from "@/lib/logger"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 
 type InventoryItem = {
   id: number
@@ -856,6 +859,332 @@ export function VentasMinoristas({ inventory }: VentasMinoristasProps) {
           </TabsContent>
         </div>
       </Tabs>
+
+      {/* Dialog Nueva Venta */}
+      <Dialog open={showNewSaleForm} onOpenChange={setShowNewSaleForm}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingSale ? "Editar Venta" : "Nueva Venta"}</DialogTitle>
+            <DialogDescription>Complete los detalles de la venta.</DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-6 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Fecha</Label>
+                <Input type="date" value={newSaleDate} onChange={(e) => setNewSaleDate(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Cliente</Label>
+                <Select 
+                  value={newSaleClientId?.toString() || ""} 
+                  onValueChange={(val) => {
+                    const client = clients.find(c => c.id.toString() === val)
+                    if (client) {
+                      setNewSaleClientId(client.id)
+                      setNewSaleClient(client.name)
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id.toString()}>
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="border rounded-lg p-4 bg-gray-50/50 space-y-4">
+              <h4 className="font-medium text-sm flex items-center gap-2">
+                <Plus className="w-4 h-4" /> Agregar Producto
+              </h4>
+              <div className="grid grid-cols-12 gap-3 items-end">
+                <div className="col-span-3 space-y-1.5">
+                  <Label className="text-xs">SKU</Label>
+                  <Input 
+                    value={currentSku} 
+                    onChange={(e) => setCurrentSku(e.target.value)} 
+                    placeholder="Buscar SKU..." 
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="col-span-4 space-y-1.5">
+                  <Label className="text-xs">Descripción</Label>
+                  <Input 
+                    value={currentDescription} 
+                    onChange={(e) => setCurrentDescription(e.target.value)} 
+                    placeholder="Descripción del producto"
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="col-span-2 space-y-1.5">
+                  <Label className="text-xs">Cantidad</Label>
+                  <Input 
+                    type="number" 
+                    min="1"
+                    value={currentQuantity} 
+                    onChange={(e) => setCurrentQuantity(Number(e.target.value))}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="col-span-2 space-y-1.5">
+                  <Label className="text-xs">Precio Unit.</Label>
+                  <Input 
+                    type="number" 
+                    min="0"
+                    value={currentUnitPrice} 
+                    onChange={(e) => setCurrentUnitPrice(Number(e.target.value))}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="col-span-1">
+                  <Button onClick={addItemToSale} size="sm" className="w-full h-8 bg-emerald-600 hover:bg-emerald-700">
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/50">
+                    <TableHead className="h-9">SKU</TableHead>
+                    <TableHead className="h-9">Descripción</TableHead>
+                    <TableHead className="h-9 text-right">Cant.</TableHead>
+                    <TableHead className="h-9 text-right">Precio</TableHead>
+                    <TableHead className="h-9 text-right">Total</TableHead>
+                    <TableHead className="h-9 w-[50px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {newSaleItems.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-500 text-sm">
+                        No hay productos agregados
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    newSaleItems.map((item, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="py-2">{item.sku}</TableCell>
+                        <TableCell className="py-2">{item.description}</TableCell>
+                        <TableCell className="py-2 text-right">{item.quantity}</TableCell>
+                        <TableCell className="py-2 text-right">{formatCurrency(item.unit_price)}</TableCell>
+                        <TableCell className="py-2 text-right font-medium">{formatCurrency(item.total_price)}</TableCell>
+                        <TableCell className="py-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 w-6 p-0 hover:text-red-600"
+                            onClick={() => setNewSaleItems(newSaleItems.filter((_, i) => i !== index))}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="grid grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Estado Stock</Label>
+                    <Select value={stockStatus} onValueChange={setStockStatus}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="restado">Stock Restado</SelectItem>
+                        <SelectItem value="pendiente">Pendiente de Restar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Estado Pago</Label>
+                    <Select value={paymentStatus} onValueChange={setPaymentStatus}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pagado">Pagado</SelectItem>
+                        <SelectItem value="pendiente">Pendiente</SelectItem>
+                        <SelectItem value="no_pagado">No Pagado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                   <Label>Estado Entrega</Label>
+                   <Select value={deliveryStatus} onValueChange={setDeliveryStatus}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="entregado">Entregado</SelectItem>
+                        <SelectItem value="pendiente">Pendiente</SelectItem>
+                        <SelectItem value="no_entregado">No Entregado</SelectItem>
+                      </SelectContent>
+                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Notas</Label>
+                  <Textarea 
+                    value={notes} 
+                    onChange={(e) => setNotes(e.target.value)} 
+                    placeholder="Notas adicionales..."
+                    className="resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-gray-50/50 p-4 rounded-lg space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal</span>
+                  <span>{formatCurrency(subtotal)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <Label className="text-sm font-normal">Descuento (%)</Label>
+                  <Input 
+                    type="number" 
+                    value={discount} 
+                    onChange={(e) => setDiscount(Number(e.target.value))}
+                    className="w-24 h-8 text-right"
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <Label className="text-sm font-normal">Costo de Envío ($)</Label>
+                  <Input 
+                    type="number" 
+                    value={shippingCost} 
+                    onChange={(e) => setShippingCost(Number(e.target.value))}
+                    className="w-24 h-8 text-right"
+                  />
+                </div>
+                <div className="border-t pt-3 mt-3 flex justify-between items-center">
+                  <span className="font-bold text-lg">Total</span>
+                  <span className="font-bold text-lg text-emerald-600">{formatCurrency(total)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNewSaleForm(false)}>Cancelar</Button>
+            <Button onClick={handleRegisterSale} className="bg-emerald-600 hover:bg-emerald-700">
+              {editingSale ? "Actualizar Venta" : "Registrar Venta"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Nuevo Cliente */}
+      <Dialog open={showClientForm} onOpenChange={setShowClientForm}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>{editingClient ? "Editar Cliente" : "Nuevo Cliente"}</DialogTitle>
+            <DialogDescription>
+              {editingClient ? "Modifique los datos del cliente." : "Ingrese los datos del nuevo cliente."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nombre Completo *</Label>
+                <Input 
+                  id="name" 
+                  value={newClientData.name} 
+                  onChange={(e) => setNewClientData({...newClientData, name: e.target.value})}
+                  placeholder="Ej: Juan Pérez"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dni">DNI / CUIT</Label>
+                <Input 
+                  id="dni" 
+                  value={newClientData.dni_cuit} 
+                  onChange={(e) => setNewClientData({...newClientData, dni_cuit: e.target.value})}
+                  placeholder="Sin puntos ni guiones"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input 
+                  id="email" 
+                  type="email"
+                  value={newClientData.email} 
+                  onChange={(e) => setNewClientData({...newClientData, email: e.target.value})}
+                  placeholder="cliente@ejemplo.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Teléfono</Label>
+                <Input 
+                  id="phone" 
+                  value={newClientData.phone} 
+                  onChange={(e) => setNewClientData({...newClientData, phone: e.target.value})}
+                  placeholder="+54 11 ..."
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="province">Provincia</Label>
+                <Input 
+                  id="province" 
+                  value={newClientData.province} 
+                  onChange={(e) => setNewClientData({...newClientData, province: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">Ciudad</Label>
+                <Input 
+                  id="city" 
+                  value={newClientData.city} 
+                  onChange={(e) => setNewClientData({...newClientData, city: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="address">Dirección</Label>
+                <Input 
+                  id="address" 
+                  value={newClientData.address} 
+                  onChange={(e) => setNewClientData({...newClientData, address: e.target.value})}
+                  placeholder="Calle y altura"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="zip">Código Postal</Label>
+                <Input 
+                  id="zip" 
+                  value={newClientData.zip_code} 
+                  onChange={(e) => setNewClientData({...newClientData, zip_code: e.target.value})}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowClientForm(false)}>Cancelar</Button>
+            <Button onClick={handleCreateClient} className="bg-emerald-600 hover:bg-emerald-700">
+              {editingClient ? "Guardar Cambios" : "Crear Cliente"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
