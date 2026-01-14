@@ -2800,7 +2800,43 @@ Este reporte contiene información confidencial y está destinado únicamente pa
           </TabsContent>
 
           <TabsContent value="pedidos" className="space-y-4 h-[calc(95vh-200px)] overflow-y-auto">
-            {/* </CHANGE> */}
+            {/* Resumen de Pedidos */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="bg-white shadow-sm border-l-4 border-l-blue-500">
+                <CardContent className="p-4 flex flex-col justify-between h-full">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Total Pedidos</p>
+                    <h3 className="text-2xl font-bold text-gray-800">{orders.length}</h3>
+                  </div>
+                  <div className="mt-2 text-xs text-gray-500">
+                    Total: {formatCurrency(orders.reduce((sum, o) => sum + (o.total_amount || 0), 0))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white shadow-sm border-l-4 border-l-orange-500">
+                <CardContent className="p-4 flex flex-col justify-between h-full">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Pendiente de Cobro (Base)</p>
+                    <h3 className="text-2xl font-bold text-gray-800">{formatCurrency(totalPorCobrarBase)}</h3>
+                  </div>
+                  <div className="mt-2 text-xs text-gray-500">Órdenes por cobrar</div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-md transform hover:scale-[1.02] transition-transform duration-200">
+                <CardContent className="p-4 flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-blue-100 font-medium text-sm uppercase tracking-wider">A Cobrar (5%)</p>
+                      <DollarSign className="w-5 h-5 text-blue-200" />
+                    </div>
+                    <h3 className="text-3xl font-bold">{formatCurrency(totalPorCobrarFaltante)}</h3>
+                  </div>
+                  <div className="mt-2 text-xs text-blue-100/80">Comisión del 5% sobre el base pendiente</div>
+                </CardContent>
+              </Card>
+            </div>
 
             <div className="bg-white p-3 rounded-lg border shadow-sm">
               <div className="flex items-center gap-2 mb-3 pb-2 border-b">
@@ -2936,25 +2972,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
             </div>
             {/* </CHANGE> */}
 
-            {/* <-- CHANGE --> */}
-            <div className="flex items-start justify-between gap-4 mb-3">
-              <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-md flex-shrink-0">
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
-                    <DollarSign className="w-7 h-7 text-blue-100 opacity-70" />
-                    <div>
-                      <div className="flex gap-2.5 mb-1.5 text-[10px] text-blue-100 font-medium">
-                        <span>Base: {formatCurrency(totalPorCobrarBase)}</span>
-                        <span>•</span>
-                        <span>5%: {formatCurrency(totalPorCobrarFaltante)}</span>
-                      </div>
-                      <p className="text-blue-100 text-[10px] font-medium uppercase tracking-wider mb-0.5">A Cobrar</p>
-                      <p className="text-xl font-bold leading-tight">{formatCurrency(totalPorCobrarFaltante)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
+            <div className="flex justify-end mb-3">
               {!isReadOnly && (
                 <Button
                   onClick={() => setShowOrderForm(true)}
@@ -2965,7 +2983,6 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                 </Button>
               )}
             </div>
-            {/* <-- CHANGE --> */}
 
             <Card>
               <CardContent className="p-0">
