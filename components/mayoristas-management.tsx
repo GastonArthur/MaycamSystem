@@ -218,8 +218,8 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
     .filter((o) => o.collection_status === "to_collect")
     .reduce((sum, o) => sum + (o.total_amount || 0), 0)
   
-  // El saldo a favor se resta de la base imponible del 5%
-  const baseImponible = Math.max(0, totalPorCobrarBase - (wholesaleConfig.favor_balance || 0))
+  // El saldo a favor NO se resta de la base imponible del 5%
+  const baseImponible = totalPorCobrarBase
   const totalPorCobrarFaltante = baseImponible * 0.05
   const [newVendor, setNewVendor] = useState("")
   const [showVendorDialog, setShowVendorDialog] = useState(false)
