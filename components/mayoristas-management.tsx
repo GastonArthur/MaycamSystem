@@ -176,6 +176,7 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
     percentage_1: 10,
     percentage_2: 17,
     percentage_3: 25,
+    favor_balance: 0,
   })
 
   // Estados para clientes
@@ -216,11 +217,16 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
   const totalPorCobrarBase = orders
     .filter((o) => o.collection_status === "to_collect")
     .reduce((sum, o) => sum + (o.total_amount || 0), 0)
-  const totalPorCobrarFaltante = totalPorCobrarBase * 0.05
+  
+  // El saldo a favor se resta de la base imponible del 5%
+  const baseImponible = Math.max(0, totalPorCobrarBase - (wholesaleConfig.favor_balance || 0))
+  const totalPorCobrarFaltante = baseImponible * 0.05
   const [newVendor, setNewVendor] = useState("")
   const [showVendorDialog, setShowVendorDialog] = useState(false)
   const [editingVendor, setEditingVendor] = useState<{ id: number; name: string } | null>(null)
   const [vendorNameDraft, setVendorNameDraft] = useState("")
+  const [showFavorDialog, setShowFavorDialog] = useState(false)
+  const [favorBalanceDraft, setFavorBalanceDraft] = useState(0)
 
   // Estados para filtros de pedidos
   const [orderFilters, setOrderFilters] = useState({
@@ -613,7 +619,7 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
       // Fetch config
       const { data: configData, error: configError } = await supabase
         .from("config")
-        .select("wholesale_percentage_1, wholesale_percentage_2, wholesale_percentage_3")
+        .select("wholesale_percentage_1, wholesale_percentage_2, wholesale_percentage_3, wholesale_favor_balance")
         .single()
 
       if (configData) {
@@ -621,6 +627,7 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
           percentage_1: Number(configData.wholesale_percentage_1),
           percentage_2: Number(configData.wholesale_percentage_2),
           percentage_3: Number(configData.wholesale_percentage_3),
+          favor_balance: Number(configData.wholesale_favor_balance || 0),
         })
       }
 
@@ -703,6 +710,7 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
             wholesale_percentage_1: newConfig.percentage_1,
             wholesale_percentage_2: newConfig.percentage_2,
             wholesale_percentage_3: newConfig.percentage_3,
+            wholesale_favor_balance: newConfig.favor_balance,
           })
           .eq("id", 1)
 
@@ -2416,66 +2424,75 @@ Este reporte contiene información confidencial y está destinado únicamente pa
 
           <TabsContent value="precios" className="space-y-4 h-[calc(95vh-200px)] overflow-y-auto">
             <Card className="bg-purple-50 border-purple-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-purple-800">Configuración de Precios</CardTitle>
-                <CardDescription>
-                  Configure los porcentajes de margen para cada nivel de precio mayorista
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <Label>Precio Nivel 1 (%)</Label>
-                    <Input
-                      type="number"
-                      value={wholesaleConfig.percentage_1}
-                      onChange={(e) =>
-                        setWholesaleConfig((prev) => ({
-                          ...prev,
-                          percentage_1: Number(e.target.value),
-                        }))
-                      }
-                      disabled={isReadOnly}
-                    />
+              <CardContent className="p-4">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="min-w-[200px]">
+                    <h3 className="font-semibold text-purple-800 flex items-center gap-2">
+                      Configuración de Precios
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Márgenes por nivel mayorista
+                    </p>
                   </div>
-                  <div>
-                    <Label>Precio Nivel 2 (%)</Label>
-                    <Input
-                      type="number"
-                      value={wholesaleConfig.percentage_2}
-                      onChange={(e) =>
-                        setWholesaleConfig((prev) => ({
-                          ...prev,
-                          percentage_2: Number(e.target.value),
-                        }))
-                      }
-                      disabled={isReadOnly}
-                    />
-                  </div>
-                  <div>
-                    <Label>Precio Nivel 3 (%)</Label>
-                    <Input
-                      type="number"
-                      value={wholesaleConfig.percentage_3}
-                      onChange={(e) =>
-                        setWholesaleConfig((prev) => ({
-                          ...prev,
-                          percentage_3: Number(e.target.value),
-                        }))
-                      }
-                      disabled={isReadOnly}
-                    />
+                  
+                  <div className="flex flex-1 items-end gap-3 justify-end">
+                    <div className="w-24">
+                      <Label className="text-xs">Nivel 1 (%)</Label>
+                      <Input
+                        type="number"
+                        className="h-8 mt-1"
+                        value={wholesaleConfig.percentage_1}
+                        onChange={(e) =>
+                          setWholesaleConfig((prev) => ({
+                            ...prev,
+                            percentage_1: Number(e.target.value),
+                          }))
+                        }
+                        disabled={isReadOnly}
+                      />
+                    </div>
+                    <div className="w-24">
+                      <Label className="text-xs">Nivel 2 (%)</Label>
+                      <Input
+                        type="number"
+                        className="h-8 mt-1"
+                        value={wholesaleConfig.percentage_2}
+                        onChange={(e) =>
+                          setWholesaleConfig((prev) => ({
+                            ...prev,
+                            percentage_2: Number(e.target.value),
+                          }))
+                        }
+                        disabled={isReadOnly}
+                      />
+                    </div>
+                    <div className="w-24">
+                      <Label className="text-xs">Nivel 3 (%)</Label>
+                      <Input
+                        type="number"
+                        className="h-8 mt-1"
+                        value={wholesaleConfig.percentage_3}
+                        onChange={(e) =>
+                          setWholesaleConfig((prev) => ({
+                            ...prev,
+                            percentage_3: Number(e.target.value),
+                          }))
+                        }
+                        disabled={isReadOnly}
+                      />
+                    </div>
+                    {!isReadOnly && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => updateWholesaleConfig(wholesaleConfig)}
+                        className="bg-purple-600 hover:bg-purple-700 h-8"
+                      >
+                        Guardar
+                      </Button>
+                    )}
                   </div>
                 </div>
-                {!isReadOnly && (
-                  <Button
-                    type="button"
-                    onClick={() => updateWholesaleConfig(wholesaleConfig)}
-                    className="mt-4 bg-purple-600 hover:bg-purple-700"
-                  >
-                    Guardar Configuración
-                  </Button>
-                )}
               </CardContent>
             </Card>
 
@@ -2724,18 +2741,8 @@ Este reporte contiene información confidencial y está destinado únicamente pa
           </TabsContent>
 
           <TabsContent value="clientes" className="space-y-4 h-[calc(95vh-200px)] overflow-y-auto">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Clientes Mayoristas</h3>
-              {!isReadOnly && (
-                <Button onClick={() => setShowClientForm(true)} className="bg-purple-600 hover:bg-purple-700">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nuevo Cliente
-                </Button>
-              )}
-            </div>
-
-            <div className="bg-white p-3 rounded-lg border shadow-sm">
-              <div className="relative max-w-md">
+            <div className="bg-white p-3 rounded-lg border shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+              <div className="relative w-full md:max-w-md">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Buscar por nombre, razón social, CUIT, provincia o WhatsApp..."
@@ -2744,6 +2751,12 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                   className="pl-9 h-9 text-sm"
                 />
               </div>
+              {!isReadOnly && (
+                <Button onClick={() => setShowClientForm(true)} className="bg-purple-600 hover:bg-purple-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nuevo Cliente
+                </Button>
+              )}
             </div>
             {/* </CHANGE> */}
 
@@ -2889,7 +2902,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
 
           <TabsContent value="pedidos" className="space-y-4 h-[calc(95vh-200px)] overflow-y-auto">
             {/* Resumen de Pedidos */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card className="bg-white shadow-sm border-l-4 border-l-blue-500">
                 <CardContent className="p-4 flex flex-col justify-between h-full">
                   <div>
@@ -2909,6 +2922,29 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                     <h3 className="text-2xl font-bold text-gray-800">{formatCurrency(totalPorCobrarBase)}</h3>
                   </div>
                   <div className="mt-2 text-xs text-gray-500">Órdenes por cobrar</div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white shadow-sm border-l-4 border-l-green-500">
+                <CardContent className="p-4 flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-500">Saldo a Favor (Excluido)</p>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 w-6 p-0"
+                        onClick={() => {
+                          setFavorBalanceDraft(wholesaleConfig.favor_balance || 0)
+                          setShowFavorDialog(true)
+                        }}
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-800">{formatCurrency(wholesaleConfig.favor_balance || 0)}</h3>
+                  </div>
+                  <div className="mt-2 text-xs text-gray-500">No se calcula el 5% sobre este monto</div>
                 </CardContent>
               </Card>
 
@@ -4269,6 +4305,49 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                   Cancelar
                 </Button>
                 <Button onClick={saveVendorEdit}>
+                  Guardar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal para editar Saldo a Favor */}
+        <Dialog open={showFavorDialog} onOpenChange={setShowFavorDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Saldo a Favor / Excluido</DialogTitle>
+              <DialogDescription>
+                Ingrese el monto que se restará de la base imponible del 5%.
+                Este monto se considera "Saldo a Favor" o "Excluido".
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Monto</Label>
+                <div className="relative">
+                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                   <Input
+                     type="number"
+                     min="0"
+                     step="0.01"
+                     value={favorBalanceDraft}
+                     onChange={(e) => setFavorBalanceDraft(Number(e.target.value))}
+                     className="pl-7"
+                   />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowFavorDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={() => {
+                   updateWholesaleConfig({
+                     ...wholesaleConfig,
+                     favor_balance: favorBalanceDraft
+                   })
+                   setShowFavorDialog(false)
+                }}>
                   Guardar
                 </Button>
               </div>

@@ -1,0 +1,1 @@
+ALTER TABLE config ADD COLUMN IF NOT EXISTS wholesale_favor_balance DECIMAL(10,2) DEFAULT 0.00;

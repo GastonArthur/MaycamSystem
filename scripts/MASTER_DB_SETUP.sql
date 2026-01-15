@@ -122,12 +122,13 @@ CREATE TABLE IF NOT EXISTS config (
   cuotas_6_percentage NUMERIC DEFAULT 40,
   cuotas_9_percentage NUMERIC DEFAULT 60,
   cuotas_12_percentage NUMERIC DEFAULT 80,
+  wholesale_favor_balance DECIMAL(10,2) DEFAULT 0.00,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Insert default config
-INSERT INTO config (id, iva_percentage, wholesale_percentage_1, wholesale_percentage_2, wholesale_percentage_3, cuotas_3_percentage, cuotas_6_percentage, cuotas_9_percentage, cuotas_12_percentage) 
-VALUES (1, 21.00, 10.00, 17.00, 25.00, 20, 40, 60, 80) 
+INSERT INTO config (id, iva_percentage, wholesale_percentage_1, wholesale_percentage_2, wholesale_percentage_3, cuotas_3_percentage, cuotas_6_percentage, cuotas_9_percentage, cuotas_12_percentage, wholesale_favor_balance) 
+VALUES (1, 21.00, 10.00, 17.00, 25.00, 20, 40, 60, 80, 0.00) 
 ON CONFLICT (id) DO UPDATE SET
   wholesale_percentage_1 = EXCLUDED.wholesale_percentage_1,
   wholesale_percentage_2 = EXCLUDED.wholesale_percentage_2,
@@ -135,7 +136,8 @@ ON CONFLICT (id) DO UPDATE SET
   cuotas_3_percentage = EXCLUDED.cuotas_3_percentage,
   cuotas_6_percentage = EXCLUDED.cuotas_6_percentage,
   cuotas_9_percentage = EXCLUDED.cuotas_9_percentage,
-  cuotas_12_percentage = EXCLUDED.cuotas_12_percentage;
+  cuotas_12_percentage = EXCLUDED.cuotas_12_percentage,
+  wholesale_favor_balance = EXCLUDED.wholesale_favor_balance;
 
 -- 6. Core Inventory Tables
 CREATE TABLE IF NOT EXISTS suppliers (

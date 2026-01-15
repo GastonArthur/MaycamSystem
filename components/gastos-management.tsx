@@ -432,12 +432,6 @@ export function GastosManagement({ onUpdateExpenses }: GastosManagementProps) {
         </Card>
       </div>
 
-      <div className="flex gap-2 justify-end">
-        <Button onClick={() => setShowForm(true)} className="bg-teal-600 hover:bg-teal-700">
-          <Plus className="mr-2 h-4 w-4" /> Nuevo Gasto
-        </Button>
-      </div>
-
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 md:grid-cols-3 h-auto">
           <TabsTrigger value="gastos">Gastos</TabsTrigger>
@@ -447,6 +441,11 @@ export function GastosManagement({ onUpdateExpenses }: GastosManagementProps) {
 
         {/* --- TAB GASTOS --- */}
         <TabsContent value="gastos" className="space-y-4">
+          <div className="flex gap-2 justify-end">
+            <Button onClick={() => setShowForm(true)} className="bg-teal-600 hover:bg-teal-700">
+              <Plus className="mr-2 h-4 w-4" /> Nuevo Gasto
+            </Button>
+          </div>
           {/* Filters */}
           <div className="bg-white p-4 rounded-lg border shadow-sm flex flex-wrap gap-4 items-center">
             <Select
