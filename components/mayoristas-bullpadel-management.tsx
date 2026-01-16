@@ -2821,24 +2821,53 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                                             <TableRow className="hover:bg-transparent">
                                               <TableHead className="h-8">SKU</TableHead>
                                               <TableHead className="h-8">Descripción</TableHead>
-                                              <TableHead className="h-8 text-right">Cantidad</TableHead>
+                                              <TableHead className="h-8">Categoría</TableHead>
+                                              <TableHead className="h-8">Estado Stock</TableHead>
+                                              <TableHead className="h-8 text-right">Cant.</TableHead>
                                               <TableHead className="h-8 text-right">Precio Unit.</TableHead>
+                                              <TableHead className="h-8 text-right">Precio c/IVA</TableHead>
                                               <TableHead className="h-8 text-right">Total</TableHead>
+                                              <TableHead className="h-8 text-right">Total c/IVA</TableHead>
+                                              <TableHead className="h-8">Notas</TableHead>
                                             </TableRow>
                                           </TableHeader>
                                           <TableBody>
                                             {order.items?.map((item, idx) => (
-                                              <TableRow key={idx} className="hover:bg-gray-50">
-                                                <TableCell className="py-2 text-sm">{item.sku}</TableCell>
+                                              <TableRow key={idx} className={`hover:bg-gray-50 ${item.stock_status === "NO HAY STOCK" ? "bg-red-50/50" : ""}`}>
+                                                <TableCell className="py-2 text-sm font-medium text-gray-700">
+                                                  {item.sku}
+                                                  {item.stock_status === "NO HAY STOCK" && (
+                                                    <span className="block text-[10px] text-red-500 font-normal">SIN STOCK</span>
+                                                  )}
+                                                </TableCell>
                                                 <TableCell className="py-2 text-sm">{item.description}</TableCell>
+                                                <TableCell className="py-2 text-sm">{item.category}</TableCell>
+                                                <TableCell className="py-2 text-sm">
+                                                  <Badge variant="outline" className={`whitespace-nowrap text-[10px] ${
+                                                      item.stock_status === "NO HAY STOCK" 
+                                                      ? "bg-red-100 text-red-700 border-red-200" 
+                                                      : "bg-gray-100 text-gray-700 border-gray-200"
+                                                  }`}>
+                                                    {item.stock_status || "-"}
+                                                  </Badge>
+                                                </TableCell>
                                                 <TableCell className="text-right py-2 text-sm">
                                                   {item.quantity}
                                                 </TableCell>
                                                 <TableCell className="text-right py-2 text-sm">
                                                   {formatCurrency(item.unit_price)}
                                                 </TableCell>
-                                                <TableCell className="text-right py-2 text-sm font-medium">
+                                                <TableCell className="text-right py-2 text-sm text-gray-500">
+                                                   {formatCurrency(item.unit_price * 1.21)}
+                                                </TableCell>
+                                                <TableCell className={`text-right py-2 text-sm font-medium ${item.stock_status === "NO HAY STOCK" ? "text-gray-400 line-through decoration-red-400" : ""}`}>
                                                   {formatCurrency(item.total_price)}
+                                                </TableCell>
+                                                <TableCell className={`text-right py-2 text-sm font-medium ${item.stock_status === "NO HAY STOCK" ? "text-gray-400 line-through decoration-red-400" : "text-gray-900"}`}>
+                                                  {formatCurrency(item.total_price * 1.21)}
+                                                </TableCell>
+                                                <TableCell className="py-2 text-sm whitespace-normal break-words max-w-[200px]">
+                                                    {item.observations}
                                                 </TableCell>
                                               </TableRow>
                                             ))}
