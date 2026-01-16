@@ -607,7 +607,7 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
       const { data: clientsData, error: clientsError } = await supabase
         .from("wholesale_clients")
         .select("*")
-        .neq("section", "bullpadel")
+        .or("section.neq.bullpadel,section.is.null")
         .order("name")
 
       if (clientsError) throw clientsError
