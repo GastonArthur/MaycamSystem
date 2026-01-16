@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (excludeSection) {
-      query = query.neq("section", excludeSection)
+      query = query.or(`section.neq.${excludeSection},section.is.null`)
     }
 
     const { data, error } = await query
