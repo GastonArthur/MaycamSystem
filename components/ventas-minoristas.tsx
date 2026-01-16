@@ -74,8 +74,8 @@ type RetailSale = {
   shipping_cost: number
   total: number
   stock_status: "restado" | "pendiente"
-  payment_status: "pagado" | "pendiente"
-  delivery_status: "entregado" | "pendiente"
+  payment_status: "pagado" | "pendiente" | "no_pagado"
+  delivery_status: "entregado" | "pendiente" | "no_entregado"
   tracking_number?: string
   bultos?: number
   notes?: string
@@ -159,7 +159,21 @@ export function VentasMinoristas({ inventory }: VentasMinoristasProps) {
         if (error) throw error
         if (clientsData) setClients(clientsData)
 
-        // TODO: Load retail sales if table exists
+        // Load retail sales
+        const { data: salesData, error: salesError } = await supabase
+          .from("retail_sales")
+          .select(`
+            *,
+            items:retail_sale_items(*)
+          `)
+          .order("date", { ascending: false })
+
+        if (salesError) {
+          // If table doesn't exist yet, just ignore (first run)
+          if (salesError.code !== "42P01") throw salesError
+        } else if (salesData) {
+           setSales(salesData as RetailSale[])
+        }
       } catch (error) {
         logError("Error loading retail clients", error)
         toast({ title: "Error", description: "No se pudieron cargar los clientes", variant: "destructive" })
@@ -291,7 +305,7 @@ export function VentasMinoristas({ inventory }: VentasMinoristasProps) {
 
   const { subtotal, total } = calculateTotals()
 
-  const handleRegisterSale = () => {
+  const handleRegisterSale = async () => {
     if (!newSaleClientId) {
       toast({ title: "Error", description: "Debe seleccionar un cliente", variant: "destructive" })
       return
@@ -301,46 +315,156 @@ export function VentasMinoristas({ inventory }: VentasMinoristasProps) {
       return
     }
 
-    if (editingSale) {
-      const updatedSale: RetailSale = {
-        ...editingSale,
+    try {
+      const saleData = {
         date: newSaleDate,
+        client_id: newSaleClientId,
         client_name: newSaleClient,
-        items: newSaleItems,
         subtotal,
         discount_percentage: discount,
         shipping_cost: shippingCost,
         total,
-        stock_status: stockStatus as any,
-        payment_status: paymentStatus as any,
-        delivery_status: deliveryStatus as any,
+        stock_status: stockStatus,
+        payment_status: paymentStatus,
+        delivery_status: deliveryStatus,
         notes,
       }
 
-      setSales(sales.map((s) => (s.id === editingSale.id ? updatedSale : s)))
-      toast({ title: "Venta actualizada", description: "La venta se ha actualizado correctamente" })
-    } else {
-      const newSale: RetailSale = {
-        id: Date.now(),
-        date: newSaleDate,
-        client_id: newSaleClientId || 0,
-        client_name: newSaleClient,
-        items: newSaleItems,
-        subtotal,
-        discount_percentage: discount,
-        shipping_cost: shippingCost,
-        total,
-        stock_status: stockStatus as any,
-        payment_status: paymentStatus as any,
-        delivery_status: deliveryStatus as any,
-        notes,
+      if (isSupabaseConfigured) {
+        if (editingSale) {
+          // Update existing sale
+          const { error: saleError } = await supabase
+            .from("retail_sales")
+            .update(saleData)
+            .eq("id", editingSale.id)
+
+          if (saleError) throw saleError
+
+          // Delete existing items and re-insert (simpler than syncing)
+          const { error: deleteItemsError } = await supabase
+            .from("retail_sale_items")
+            .delete()
+            .eq("sale_id", editingSale.id)
+
+          if (deleteItemsError) throw deleteItemsError
+
+          // Insert new items
+          const itemsToInsert = newSaleItems.map(item => ({
+            sale_id: editingSale.id,
+            sku: item.sku,
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+            cost: item.cost
+          }))
+
+          const { data: newItems, error: itemsError } = await supabase
+            .from("retail_sale_items")
+            .insert(itemsToInsert)
+            .select()
+
+          if (itemsError) throw itemsError
+
+          const updatedSale: RetailSale = {
+            ...editingSale,
+            ...saleData,
+            items: newItems as RetailSaleItem[],
+            stock_status: stockStatus as any,
+            payment_status: paymentStatus as any,
+            delivery_status: deliveryStatus as any,
+          }
+
+          setSales(sales.map((s) => (s.id === editingSale.id ? updatedSale : s)))
+          await logActivity("UPDATE_RETAIL_SALE", "retail_sales", editingSale.id, editingSale, updatedSale, "Venta minorista actualizada")
+          toast({ title: "Venta actualizada", description: "La venta se ha actualizado correctamente" })
+        } else {
+          // Create new sale
+          const { data: newSale, error: saleError } = await supabase
+            .from("retail_sales")
+            .insert(saleData)
+            .select()
+            .single()
+
+          if (saleError) throw saleError
+
+          // Insert items
+          const itemsToInsert = newSaleItems.map(item => ({
+            sale_id: newSale.id,
+            sku: item.sku,
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+            cost: item.cost
+          }))
+
+          const { data: newItems, error: itemsError } = await supabase
+            .from("retail_sale_items")
+            .insert(itemsToInsert)
+            .select()
+
+          if (itemsError) throw itemsError
+
+          const fullSale: RetailSale = {
+            ...newSale,
+            items: newItems as RetailSaleItem[],
+             stock_status: stockStatus as any,
+            payment_status: paymentStatus as any,
+            delivery_status: deliveryStatus as any,
+          }
+
+          setSales([fullSale, ...sales])
+          await logActivity("CREATE_RETAIL_SALE", "retail_sales", newSale.id, null, fullSale, "Venta minorista creada")
+          toast({ title: "Venta registrada", description: "La venta se ha registrado correctamente" })
+        }
+      } else {
+        // Mock implementation
+        if (editingSale) {
+          const updatedSale: RetailSale = {
+            ...editingSale,
+            date: newSaleDate,
+            client_name: newSaleClient,
+            items: newSaleItems,
+            subtotal,
+            discount_percentage: discount,
+            shipping_cost: shippingCost,
+            total,
+            stock_status: stockStatus as any,
+            payment_status: paymentStatus as any,
+            delivery_status: deliveryStatus as any,
+            notes,
+          }
+    
+          setSales(sales.map((s) => (s.id === editingSale.id ? updatedSale : s)))
+          toast({ title: "Venta actualizada", description: "La venta se ha actualizado correctamente" })
+        } else {
+          const newSale: RetailSale = {
+            id: Date.now(),
+            date: newSaleDate,
+            client_id: newSaleClientId || 0,
+            client_name: newSaleClient,
+            items: newSaleItems,
+            subtotal,
+            discount_percentage: discount,
+            shipping_cost: shippingCost,
+            total,
+            stock_status: stockStatus as any,
+            payment_status: paymentStatus as any,
+            delivery_status: deliveryStatus as any,
+            notes,
+          }
+          setSales([newSale, ...sales])
+          toast({ title: "Venta registrada", description: "La venta se ha registrado correctamente" })
+        }
       }
-      setSales([newSale, ...sales])
-      toast({ title: "Venta registrada", description: "La venta se ha registrado correctamente" })
+
+      setShowNewSaleForm(false)
+      resetForm()
+    } catch (error) {
+      logError("Error saving sale", error)
+      toast({ title: "Error", description: "No se pudo guardar la venta", variant: "destructive" })
     }
-
-    setShowNewSaleForm(false)
-    resetForm()
   }
 
   const resetForm = () => {
@@ -375,10 +499,22 @@ export function VentasMinoristas({ inventory }: VentasMinoristasProps) {
     setShowNewSaleForm(true)
   }
 
-  const deleteSale = (id: number) => {
+  const deleteSale = async (id: number) => {
     if (confirm("¿Está seguro de eliminar esta venta?")) {
-      setSales(sales.filter((s) => s.id !== id))
-      toast({ title: "Venta eliminada", description: "La venta ha sido eliminada correctamente" })
+      try {
+        if (isSupabaseConfigured) {
+          const { error } = await supabase.from("retail_sales").delete().eq("id", id)
+          if (error) throw error
+          
+          await logActivity("DELETE_RETAIL_SALE", "retail_sales", id, null, null, "Venta minorista eliminada")
+        }
+        
+        setSales(sales.filter((s) => s.id !== id))
+        toast({ title: "Venta eliminada", description: "La venta ha sido eliminada correctamente" })
+      } catch (error) {
+        logError("Error deleting sale", error)
+        toast({ title: "Error", description: "No se pudo eliminar la venta", variant: "destructive" })
+      }
     }
   }
 
