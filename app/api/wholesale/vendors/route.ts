@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     const section = req.nextUrl.searchParams.get("section")
+    const excludeSection = req.nextUrl.searchParams.get("exclude_section")
     
     let query = supabase
       .from("wholesale_vendors")
@@ -63,6 +64,10 @@ export async function GET(req: NextRequest) {
     
     if (section) {
       query = query.eq("section", section)
+    }
+
+    if (excludeSection) {
+      query = query.neq("section", excludeSection)
     }
 
     const { data, error } = await query

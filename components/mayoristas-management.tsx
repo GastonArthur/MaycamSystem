@@ -607,23 +607,32 @@ export function MayoristasManagement({ inventory, suppliers, brands }: Mayorista
       const { data: clientsData, error: clientsError } = await supabase
         .from("wholesale_clients")
         .select("*")
+        .neq("section", "bullpadel")
         .order("name")
 
       if (clientsError) throw clientsError
       setClients(clientsData || [])
 
       // Fetch orders
-      const { data: ordersData, error: ordersError } = await supabase
-        .from("wholesale_orders")
-        .select("*, items:wholesale_order_items(*)")
-        .order("created_at", { ascending: false })
+      const clientIds = (clientsData || []).map((c) => c.id)
+      let ordersData: any[] = []
 
-      if (ordersError) throw ordersError
-      setOrders(ordersData || [])
+      if (clientIds.length > 0) {
+        const { data, error } = await supabase
+          .from("wholesale_orders")
+          .select("*, items:wholesale_order_items(*)")
+          .in("client_id", clientIds)
+          .order("created_at", { ascending: false })
+        
+        if (error) throw error
+        ordersData = data || []
+      }
+      
+      setOrders(ordersData)
 
       // Fetch vendors from API (to bypass RLS issues)
       try {
-        const vendorsRes = await fetch("/api/wholesale/vendors")
+        const vendorsRes = await fetch("/api/wholesale/vendors?exclude_section=bullpadel")
         if (vendorsRes.ok) {
           const vendorsJson = await vendorsRes.json()
           setVendors(vendorsJson.data || [])
