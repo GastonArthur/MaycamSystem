@@ -2753,7 +2753,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                                 </TableCell>
                                 <TableCell className="text-right">${order.total_amount.toFixed(2)}</TableCell>
                                 <TableCell className="text-right font-medium text-gray-900">${(order.total_amount * 1.21).toFixed(2)}</TableCell>
-                                <TableCell className="max-w-[200px] truncate hidden md:table-cell">
+                                <TableCell className="max-w-[200px] hidden md:table-cell whitespace-normal">
                                   {order.notes}
                                 </TableCell>
                                 <TableCell className="hidden md:table-cell">
@@ -2873,6 +2873,70 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                                             ))}
                                           </TableBody>
                                         </Table>
+                                      </div>
+                                      
+                                      <div className="mt-6 grid grid-cols-2 gap-8 border-t pt-4">
+                                         <div className="space-y-4">
+                                            <div className="bg-gray-50 p-4 rounded-lg border">
+                                              <h5 className="font-semibold text-sm mb-3 text-gray-700">Resumen por Categoría</h5>
+                                              <div className="space-y-2 text-sm">
+                                                  {Object.entries(
+                                                    (order.items || []).reduce((acc, item) => {
+                                                      if (item.stock_status === "NO HAY STOCK") return acc
+                                                      const cat = item.category || "Sin Categoría"
+                                                      if (!acc[cat]) acc[cat] = 0
+                                                      acc[cat] += item.total_price
+                                                      return acc
+                                                    }, {} as Record<string, number>)
+                                                  ).map(([cat, total]) => (
+                                                    <div key={cat} className="flex justify-between items-start">
+                                                      <span className="text-gray-600">{cat}</span>
+                                                      <div className="text-right">
+                                                        <div className="font-medium">{formatCurrency(total)}</div>
+                                                        <div className="text-xs text-gray-500">c/IVA: {formatCurrency(total * 1.21)}</div>
+                                                      </div>
+                                                    </div>
+                                                  ))}
+                                                  {(order.items || []).filter(i => i.stock_status !== "NO HAY STOCK").length === 0 && (
+                                                      <div className="text-gray-400 italic text-xs">No hay items válidos para sumar</div>
+                                                  )}
+                                              </div>
+                                            </div>
+                                         </div>
+
+                                         <div className="space-y-3 bg-gray-50 p-4 rounded-lg border h-fit">
+                                            <h5 className="font-semibold text-sm mb-3 text-gray-700">Totales del Pedido</h5>
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-gray-600">Subtotal</span>
+                                                <span className="font-medium">{formatCurrency(order.subtotal || order.total_amount)}</span>
+                                            </div>
+                                            {order.discount_percentage ? (
+                                                <div className="flex justify-between text-sm text-green-600">
+                                                    <span>Descuento ({order.discount_percentage}%)</span>
+                                                    <span>- {formatCurrency((order.subtotal || order.total_amount) * (order.discount_percentage / 100))}</span>
+                                                </div>
+                                            ) : null}
+                                            {order.shipping_cost ? (
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-gray-600">Envío</span>
+                                                    <span>{formatCurrency(order.shipping_cost)}</span>
+                                                </div>
+                                            ) : null}
+                                            <div className="border-t pt-2 mt-2 flex justify-between items-center">
+                                                <span className="font-bold text-gray-900">Total</span>
+                                                <div className="text-right">
+                                                    <span className="font-bold text-lg text-purple-700 block">{formatCurrency(order.total_amount)}</span>
+                                                    <span className="text-xs text-gray-500 font-medium">c/IVA: {formatCurrency(order.total_amount * 1.21)}</span>
+                                                </div>
+                                            </div>
+                                            
+                                            {order.notes && (
+                                                <div className="mt-4 pt-4 border-t">
+                                                    <h6 className="font-semibold text-xs text-gray-500 mb-1">NOTAS DEL PEDIDO</h6>
+                                                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{order.notes}</p>
+                                                </div>
+                                            )}
+                                         </div>
                                       </div>
                                     </div>
                                   </TableCell>
