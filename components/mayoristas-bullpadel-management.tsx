@@ -253,6 +253,10 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
     fechaFin: "",
   })
 
+  const existingCategories = Array.from(new Set(
+    orders.flatMap(o => o.items?.map(i => i.category) || []).filter(Boolean)
+  )).sort() as string[]
+
   const sortVendorsByName = (list: { id: number; name: string }[]) =>
     [...list].sort((a, b) => a.name.localeCompare(b.name))
 
@@ -2658,6 +2662,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                         <TableHead>Estado</TableHead>
                         <TableHead>Pagado</TableHead>
                         <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="text-right">Total c/IVA</TableHead>
                         <TableHead className="hidden md:table-cell">Notas</TableHead>
                         <TableHead className="hidden md:table-cell">Items</TableHead>
                         <TableHead>Acciones</TableHead>
@@ -2744,6 +2749,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                                   </DropdownMenu>
                                 </TableCell>
                                 <TableCell className="text-right">${order.total_amount.toFixed(2)}</TableCell>
+                                <TableCell className="text-right font-medium text-gray-900">${(order.total_amount * 1.21).toFixed(2)}</TableCell>
                                 <TableCell className="max-w-[200px] truncate hidden md:table-cell">
                                   {order.notes}
                                 </TableCell>
@@ -2815,7 +2821,6 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                                               <TableHead className="h-8 text-right">Cantidad</TableHead>
                                               <TableHead className="h-8 text-right">Precio Unit.</TableHead>
                                               <TableHead className="h-8 text-right">Total</TableHead>
-                                              <TableHead className="h-8 text-right">Costo Est.</TableHead>
                                             </TableRow>
                                           </TableHeader>
                                           <TableBody>
@@ -2831,12 +2836,6 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                                                 </TableCell>
                                                 <TableCell className="text-right py-2 text-sm font-medium">
                                                   {formatCurrency(item.total_price)}
-                                                </TableCell>
-                                                <TableCell className="text-right py-2 text-sm text-gray-500">
-                                                  {(() => {
-                                                    const invItem = inventory.find((i) => i.sku === item.sku)
-                                                    return invItem ? formatCurrency(invItem.cost_without_tax) : "-"
-                                                  })()}
                                                 </TableCell>
                                               </TableRow>
                                             ))}
@@ -2898,7 +2897,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                   </DialogHeader>
 
                   <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                    <div className="grid grid-cols-2 gap-8">
+                    <div className="grid grid-cols-3 gap-8">
                       <div className="space-y-2">
                         <Label className="text-base font-semibold text-gray-700">Fecha de Emisión</Label>
                         <Input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className="h-10" />
@@ -2928,6 +2927,21 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                             <Plus className="w-4 h-4" />
                           </Button>
                         </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-base font-semibold text-gray-700">Vendedor</Label>
+                        <Select value={orderVendor} onValueChange={setOrderVendor}>
+                          <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Seleccionar vendedor" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {vendors.map((vendor) => (
+                              <SelectItem key={vendor.id} value={vendor.name}>
+                                {vendor.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
@@ -3003,11 +3017,17 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                         <div className="col-span-3 space-y-1.5">
                           <Label className="text-sm font-medium">Categoría</Label>
                           <Input
+                            list="categories-list"
                             value={currentCategory}
                             onChange={(e) => setCurrentCategory(e.target.value)}
                             placeholder="Ej: Paletas"
                             className="h-10"
                           />
+                          <datalist id="categories-list">
+                            {existingCategories.map((cat) => (
+                              <option key={cat} value={cat} />
+                            ))}
+                          </datalist>
                         </div>
                         <div className="col-span-8 space-y-1.5">
                           <Label className="text-sm font-medium">Observaciones Item</Label>
@@ -3127,6 +3147,29 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                       </div>
 
                       <div className="bg-gray-50/80 p-6 rounded-xl space-y-4 h-fit border shadow-sm">
+                        {orderItems.length > 0 && (
+                          <div className="border-b pb-4 mb-2 space-y-3">
+                            <Label className="text-sm font-semibold text-gray-700">Resumen por Categoría</Label>
+                            <div className="space-y-2 text-sm">
+                              {Object.entries(
+                                orderItems.reduce((acc, item) => {
+                                  const cat = item.category || "Sin Categoría"
+                                  if (!acc[cat]) acc[cat] = 0
+                                  acc[cat] += item.total_price
+                                  return acc
+                                }, {} as Record<string, number>)
+                              ).map(([cat, total]) => (
+                                <div key={cat} className="flex justify-between items-start">
+                                  <span className="text-gray-600">{cat}</span>
+                                  <div className="text-right">
+                                    <div className="font-medium">{formatCurrency(total)}</div>
+                                    <div className="text-xs text-gray-500">c/IVA: {formatCurrency(total * 1.21)}</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         <div className="flex justify-between text-base">
                           <span className="text-gray-600">Subtotal</span>
                           <span className="font-medium">{formatCurrency(subtotal)}</span>
@@ -3151,7 +3194,10 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                         </div>
                         <div className="border-t border-gray-200 pt-4 mt-2 flex justify-between items-center">
                           <span className="font-bold text-xl text-gray-800">Total</span>
-                          <span className="font-bold text-2xl text-purple-700">{formatCurrency(total)}</span>
+                          <div className="text-right">
+                            <span className="font-bold text-2xl text-purple-700 block">{formatCurrency(total)}</span>
+                            <span className="text-sm text-gray-500 font-medium">c/IVA: {formatCurrency(total * 1.21)}</span>
+                          </div>
                         </div>
                         
                         <div className="pt-4">
