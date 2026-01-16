@@ -123,6 +123,7 @@ type WholesaleOrderItem = {
   total_price: number
   stock_status?: "STOCK RESTADO" | "NO HAY STOCK" | "ENTREGA BULLPADEL" | "PEDIR A BULLPADEL"
   observations?: string
+  category?: string
 }
 
 interface MayoristasManagementProps {
@@ -220,6 +221,7 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
     "STOCK RESTADO" | "NO HAY STOCK" | "ENTREGA BULLPADEL" | "PEDIR A BULLPADEL"
   >("STOCK RESTADO")
   const [currentObservations, setCurrentObservations] = useState("")
+  const [currentCategory, setCurrentCategory] = useState("")
   const [orderNotes, setOrderNotes] = useState("")
   const [orderVendor, setOrderVendor] = useState("")
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split("T")[0])
@@ -1045,6 +1047,7 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
       total_price: currentUnitPrice * currentQuantity,
       stock_status: currentStockStatus,
       observations: currentObservations,
+      category: currentCategory,
     }
 
     setOrderItems((prev) => [...prev, newItem])
@@ -1054,6 +1057,7 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
     setCurrentQuantity(1)
     setCurrentStockStatus("STOCK RESTADO")
     setCurrentObservations("")
+    setCurrentCategory("")
   }
 
   // Auto-fill details removed
@@ -1157,6 +1161,7 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
             total_price: item.total_price,
             stock_status: item.stock_status,
             observations: item.observations,
+            category: item.category,
           }))
 
           const { error: itemsError } = await supabase.from("wholesale_order_items").insert(itemsToInsert)
@@ -1192,6 +1197,7 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
             total_price: item.total_price,
             stock_status: item.stock_status,
             observations: item.observations,
+            category: item.category,
           }))
 
           const { error: itemsError } = await supabase.from("wholesale_order_items").insert(itemsToInsert)
@@ -1365,7 +1371,26 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
     setOrderNotes(order.notes || "")
     setOrderVendor(order.vendor || "")
     setOrderDate(order.order_date.split("T")[0])
-    setOrderItems(order.items || [])
+
+    // Parse category from observations OR use column
+    const parsedItems = (order.items || []).map((item) => {
+      // If category already exists (from DB column), use it
+      if (item.category) return item
+
+      // Fallback for old records: parse from observations
+      if (item.observations && item.observations.startsWith("[")) {
+        const match = item.observations.match(/^\[(.*?)\]\s*(.*)$/)
+        if (match) {
+          return {
+            ...item,
+            category: match[1],
+            observations: match[2],
+          }
+        }
+      }
+      return item
+    })
+    setOrderItems(parsedItems)
 
     // Set new fields
     setDiscount(order.discount_percentage || 0)
@@ -2975,7 +3000,16 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                       </div>
                       
                       <div className="grid grid-cols-12 gap-4 items-end mt-4">
-                        <div className="col-span-11 space-y-1.5">
+                        <div className="col-span-3 space-y-1.5">
+                          <Label className="text-sm font-medium">Categoría</Label>
+                          <Input
+                            value={currentCategory}
+                            onChange={(e) => setCurrentCategory(e.target.value)}
+                            placeholder="Ej: Paletas"
+                            className="h-10"
+                          />
+                        </div>
+                        <div className="col-span-8 space-y-1.5">
                           <Label className="text-sm font-medium">Observaciones Item</Label>
                           <Input
                             value={currentObservations}
@@ -3004,6 +3038,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                           <TableRow className="bg-gray-100/80 hover:bg-gray-100/80">
                             <TableHead className="h-10 font-bold text-gray-700">SKU</TableHead>
                             <TableHead className="h-10 font-bold text-gray-700">Descripción</TableHead>
+                            <TableHead className="h-10 font-bold text-gray-700">Categoría</TableHead>
                             <TableHead className="h-10 font-bold text-gray-700 text-right">Cant.</TableHead>
                             <TableHead className="h-10 font-bold text-gray-700 text-right">Precio</TableHead>
                             <TableHead className="h-10 font-bold text-gray-700 text-right">Total</TableHead>
@@ -3013,7 +3048,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                         <TableBody>
                           {orderItems.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={6} className="text-center py-12 text-gray-400 text-base">
+                              <TableCell colSpan={7} className="text-center py-12 text-gray-400 text-base">
                                 <div className="flex flex-col items-center gap-2">
                                     <ShoppingCart className="w-10 h-10 opacity-20" />
                                     No hay productos agregados
@@ -3025,6 +3060,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                               <TableRow key={index} className="hover:bg-gray-50/50 transition-colors">
                                 <TableCell className="py-3 font-medium text-gray-700">{item.sku}</TableCell>
                                 <TableCell className="py-3 text-gray-600">{item.description}</TableCell>
+                                <TableCell className="py-3 text-gray-600">{item.category}</TableCell>
                                 <TableCell className="py-3 text-right">{item.quantity}</TableCell>
                                 <TableCell className="py-3 text-right">
                                   {formatCurrency(item.unit_price)}
