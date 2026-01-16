@@ -1081,7 +1081,10 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
   }
 
   const calculateTotals = () => {
-    const subtotal = orderItems.reduce((sum, item) => sum + item.total_price, 0)
+    const subtotal = orderItems.reduce((sum, item) => {
+      if (item.stock_status === "NO HAY STOCK") return sum
+      return sum + item.total_price
+    }, 0)
     const discountAmount = subtotal * (discount / 100)
     const total = subtotal - discountAmount + shippingCost
     return { subtotal, total }
@@ -3059,6 +3062,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                             <TableHead className="h-10 font-bold text-gray-700">SKU</TableHead>
                             <TableHead className="h-10 font-bold text-gray-700">Descripción</TableHead>
                             <TableHead className="h-10 font-bold text-gray-700">Categoría</TableHead>
+                            <TableHead className="h-10 font-bold text-gray-700">Estado Stock</TableHead>
                             <TableHead className="h-10 font-bold text-gray-700 text-right">Cant.</TableHead>
                             <TableHead className="h-10 font-bold text-gray-700 text-right">Precio</TableHead>
                             <TableHead className="h-10 font-bold text-gray-700 text-right">Total</TableHead>
@@ -3068,7 +3072,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                         <TableBody>
                           {orderItems.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={7} className="text-center py-12 text-gray-400 text-base">
+                              <TableCell colSpan={8} className="text-center py-12 text-gray-400 text-base">
                                 <div className="flex flex-col items-center gap-2">
                                     <ShoppingCart className="w-10 h-10 opacity-20" />
                                     No hay productos agregados
@@ -3077,15 +3081,26 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                             </TableRow>
                           ) : (
                             orderItems.map((item, index) => (
-                              <TableRow key={index} className="hover:bg-gray-50/50 transition-colors">
-                                <TableCell className="py-3 font-medium text-gray-700">{item.sku}</TableCell>
+                              <TableRow key={index} className={`hover:bg-gray-50/50 transition-colors ${item.stock_status === "NO HAY STOCK" ? "bg-red-50/50" : ""}`}>
+                                <TableCell className="py-3 font-medium text-gray-700">
+                                  {item.sku}
+                                </TableCell>
                                 <TableCell className="py-3 text-gray-600">{item.description}</TableCell>
                                 <TableCell className="py-3 text-gray-600">{item.category}</TableCell>
+                                <TableCell className="py-3">
+                                  <Badge variant="outline" className={`whitespace-nowrap text-[10px] ${
+                                      item.stock_status === "NO HAY STOCK" 
+                                      ? "bg-red-100 text-red-700 border-red-200" 
+                                      : "bg-gray-100 text-gray-700 border-gray-200"
+                                  }`}>
+                                    {item.stock_status}
+                                  </Badge>
+                                </TableCell>
                                 <TableCell className="py-3 text-right">{item.quantity}</TableCell>
                                 <TableCell className="py-3 text-right">
                                   {formatCurrency(item.unit_price)}
                                 </TableCell>
-                                <TableCell className="py-3 text-right font-bold text-gray-800">
+                                <TableCell className={`py-3 text-right font-bold ${item.stock_status === "NO HAY STOCK" ? "text-gray-400 line-through decoration-red-400" : "text-gray-800"}`}>
                                   {formatCurrency(item.total_price)}
                                 </TableCell>
                                 <TableCell className="py-3">
@@ -3153,6 +3168,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                             <div className="space-y-2 text-sm">
                               {Object.entries(
                                 orderItems.reduce((acc, item) => {
+                                  if (item.stock_status === "NO HAY STOCK") return acc
                                   const cat = item.category || "Sin Categoría"
                                   if (!acc[cat]) acc[cat] = 0
                                   acc[cat] += item.total_price
