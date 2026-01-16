@@ -1014,6 +1014,8 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
   }
 
   const addItemToOrder = () => {
+    // Validations removed as per user request to make everything optional
+    /*
     if (!currentSku || currentQuantity <= 0) {
       toast({
         title: "Datos incompletos",
@@ -1031,6 +1033,7 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
       })
       return
     }
+    */
 
     const newItem: WholesaleOrderItem = {
       id: Date.now(),
@@ -1081,6 +1084,8 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
   const createOrder = async (e?: React.MouseEvent) => {
     if (e) e.preventDefault()
 
+    // Validations removed as per user request
+    /*
     if (!selectedClient) {
       toast({
         title: "Error",
@@ -1098,8 +1103,9 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
       })
       return
     }
+    */
 
-    const clientId = Number.parseInt(selectedClient)
+    const clientId = selectedClient ? Number.parseInt(selectedClient) : null
 
     try {
       if (isSupabaseConfigured) {
@@ -3137,6 +3143,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
               >
                 <DialogContent className="max-w-[1000px] max-h-[90vh] overflow-y-auto bg-white">
                   <DialogHeader>
+                    <DialogDescription className="sr-only">Vista previa de la factura</DialogDescription>
                     <div className="flex justify-between items-start border-b pb-4">
                       <div>
                         <DialogTitle className="text-2xl font-bold mb-2">FACTURA</DialogTitle>
@@ -3775,6 +3782,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingClient ? "Editar Cliente Mayorista" : "Nuevo Cliente Mayorista"}</DialogTitle>
+                <DialogDescription>Complete los datos del cliente.</DialogDescription>
               </DialogHeader>
               
               <div className="space-y-6 py-4">
@@ -3917,6 +3925,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Detalles del Cliente</DialogTitle>
+                <DialogDescription>Información completa del cliente seleccionado.</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
