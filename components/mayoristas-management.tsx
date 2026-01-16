@@ -3592,23 +3592,23 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                   }
                 }}
               >
-                <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto p-4">
-                  <DialogHeader className="pb-2">
+                <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
+                  <DialogHeader className="px-6 py-4 border-b bg-gray-50/50">
                     <DialogTitle>{editingOrder ? "Editar Pedido" : "Nueva Venta"}</DialogTitle>
                     <DialogDescription>Complete los detalles de la venta.</DialogDescription>
                   </DialogHeader>
 
-                  <div className="grid gap-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label>Fecha</Label>
-                        <Input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} />
+                  <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    <div className="grid grid-cols-2 gap-8">
+                      <div className="space-y-2">
+                        <Label className="text-base font-semibold text-gray-700">Fecha de Emisión</Label>
+                        <Input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className="h-10" />
                       </div>
-                      <div className="space-y-1.5">
-                        <Label>Cliente</Label>
+                      <div className="space-y-2">
+                        <Label className="text-base font-semibold text-gray-700">Cliente</Label>
                         <div className="flex gap-2">
                           <Select value={selectedClient} onValueChange={setSelectedClient}>
-                            <SelectTrigger className="flex-1">
+                            <SelectTrigger className="flex-1 h-10">
                               <SelectValue placeholder="Seleccionar cliente" />
                             </SelectTrigger>
                             <SelectContent>
@@ -3622,6 +3622,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                           <Button
                             variant="outline"
                             size="icon"
+                            className="h-10 w-10"
                             onClick={() => setShowClientForm(true)}
                             title="Nuevo Cliente"
                           >
@@ -3631,104 +3632,108 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                       </div>
                     </div>
 
-                    <div className="border rounded-lg p-3 bg-gray-50/50 space-y-3">
-                      <h4 className="font-medium text-sm flex items-center gap-2">
-                        <Plus className="w-4 h-4" /> Agregar Producto
+                    <div className="border rounded-xl p-5 bg-gray-50/30 space-y-4 shadow-sm">
+                      <h4 className="font-semibold text-base flex items-center gap-2 text-purple-700">
+                        <div className="p-1 bg-purple-100 rounded-md">
+                            <Plus className="w-4 h-4" /> 
+                        </div>
+                        Agregar Producto
                       </h4>
-                      <div className="grid grid-cols-12 gap-2 items-end">
-                        <div className="col-span-2 space-y-1">
-                          <Label className="text-xs">SKU</Label>
+                      <div className="grid grid-cols-12 gap-4 items-end">
+                        <div className="col-span-2 space-y-1.5">
+                          <Label className="text-sm font-medium">SKU</Label>
                           <Input
                             value={currentSku}
                             onChange={(e) => {
                                 const val = e.target.value
                                 setCurrentSku(val)
-                                // Auto-fill removed
                             }}
                             placeholder="Buscar SKU..."
-                            className="h-8 text-sm"
+                            className="h-10"
                             onKeyDown={(e) => {
                                 if (e.key === "Enter") addItemToOrder()
                             }}
                           />
                         </div>
-                        <div className="col-span-5 space-y-1">
-                          <Label className="text-xs">Descripción</Label>
+                        <div className="col-span-5 space-y-1.5">
+                          <Label className="text-sm font-medium">Descripción</Label>
                           <Input
                             value={currentDescription}
                             onChange={(e) => setCurrentDescription(e.target.value)}
                             placeholder="Descripción del producto"
-                            className="h-8 text-sm"
+                            className="h-10"
                           />
                         </div>
-                        <div className="col-span-2 space-y-1">
-                          <Label className="text-xs">Cantidad</Label>
+                        <div className="col-span-2 space-y-1.5">
+                          <Label className="text-sm font-medium">Cantidad</Label>
                           <Input
                             type="number"
                             min="1"
                             value={currentQuantity}
                             onChange={(e) => setCurrentQuantity(Number(e.target.value))}
-                            className="h-8 text-sm"
+                            className="h-10"
                           />
                         </div>
-                        <div className="col-span-2 space-y-1">
-                          <Label className="text-xs">Precio Unit.</Label>
+                        <div className="col-span-2 space-y-1.5">
+                          <Label className="text-sm font-medium">Precio Unit.</Label>
                           <Input
                             type="number"
                             min="0"
                             value={currentUnitPrice}
                             onChange={(e) => setCurrentUnitPrice(Number(e.target.value))}
-                            className="h-8 text-sm"
+                            className="h-10"
                           />
                         </div>
                         <div className="col-span-1">
                           <Button
                             onClick={addItemToOrder}
-                            size="sm"
-                            className="w-full h-8 bg-purple-600 hover:bg-purple-700"
+                            className="w-full h-10 bg-purple-600 hover:bg-purple-700 shadow-md"
                           >
-                            <Plus className="w-4 h-4" />
+                            <Plus className="w-5 h-5" />
                           </Button>
                         </div>
                       </div>
                     </div>
 
-                    <div className="border rounded-lg overflow-hidden max-h-[200px] overflow-y-auto">
+                    <div className="border rounded-xl overflow-hidden shadow-sm bg-white min-h-[250px]">
                       <Table>
                         <TableHeader>
-                          <TableRow className="bg-gray-50/50">
-                            <TableHead className="h-8">SKU</TableHead>
-                            <TableHead className="h-8">Descripción</TableHead>
-                            <TableHead className="h-8 text-right">Cant.</TableHead>
-                            <TableHead className="h-8 text-right">Precio</TableHead>
-                            <TableHead className="h-8 text-right">Total</TableHead>
-                            <TableHead className="h-8 w-[50px]"></TableHead>
+                          <TableRow className="bg-gray-100/80 hover:bg-gray-100/80">
+                            <TableHead className="h-10 font-bold text-gray-700">SKU</TableHead>
+                            <TableHead className="h-10 font-bold text-gray-700">Descripción</TableHead>
+                            <TableHead className="h-10 font-bold text-gray-700 text-right">Cant.</TableHead>
+                            <TableHead className="h-10 font-bold text-gray-700 text-right">Precio</TableHead>
+                            <TableHead className="h-10 font-bold text-gray-700 text-right">Total</TableHead>
+                            <TableHead className="h-10 w-[50px]"></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {orderItems.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={6} className="text-center py-6 text-gray-500 text-sm">
-                                No hay productos agregados
+                              <TableCell colSpan={6} className="text-center py-12 text-gray-400 text-base">
+                                <div className="flex flex-col items-center gap-2">
+                                    <ShoppingBag className="w-10 h-10 opacity-20" />
+                                    No hay productos agregados
+                                </div>
                               </TableCell>
                             </TableRow>
                           ) : (
                             orderItems.map((item, index) => (
-                              <TableRow key={index}>
-                                <TableCell className="py-1 text-sm">{item.sku}</TableCell>
-                                <TableCell className="py-1 text-sm">{item.description}</TableCell>
-                                <TableCell className="py-1 text-right text-sm">{item.quantity}</TableCell>
-                                <TableCell className="py-1 text-right text-sm">
+                              <TableRow key={index} className="hover:bg-gray-50/50 transition-colors">
+                                <TableCell className="py-3 font-medium text-gray-700">{item.sku}</TableCell>
+                                <TableCell className="py-3 text-gray-600">{item.description}</TableCell>
+                                <TableCell className="py-3 text-right">{item.quantity}</TableCell>
+                                <TableCell className="py-3 text-right">
                                   {formatCurrency(item.unit_price)}
                                 </TableCell>
-                                <TableCell className="py-1 text-right font-medium text-sm">
+                                <TableCell className="py-3 text-right font-bold text-gray-800">
                                   {formatCurrency(item.total_price)}
                                 </TableCell>
-                                <TableCell className="py-1">
+                                <TableCell className="py-3">
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-6 w-6 p-0 hover:text-red-600"
+                                    className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 rounded-full"
                                     onClick={() => removeItemFromOrder(item.id)}
                                   >
                                     <Trash2 className="w-4 h-4" />
@@ -3741,13 +3746,13 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                       </Table>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">Estado Stock</Label>
+                    <div className="grid grid-cols-2 gap-8">
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Estado Stock</Label>
                             <Select value={stockStatus} onValueChange={setStockStatus}>
-                              <SelectTrigger className="h-8 text-sm">
+                              <SelectTrigger className="h-10">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -3756,10 +3761,10 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">Estado Pago</Label>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Estado Pago</Label>
                             <Select value={paymentStatus} onValueChange={setPaymentStatus}>
-                              <SelectTrigger className="h-8 text-sm">
+                              <SelectTrigger className="h-10">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -3770,10 +3775,10 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                             </Select>
                           </div>
                         </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Estado Entrega</Label>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Estado Entrega</Label>
                           <Select value={deliveryStatus} onValueChange={setDeliveryStatus}>
-                            <SelectTrigger className="h-8 text-sm">
+                            <SelectTrigger className="h-10">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -3783,47 +3788,47 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Notas</Label>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Notas</Label>
                           <Textarea
                             value={orderNotes}
                             onChange={(e) => setOrderNotes(e.target.value)}
                             placeholder="Notas adicionales..."
-                            className="resize-none h-20 text-sm"
+                            className="resize-none h-24 text-sm bg-gray-50/30"
                           />
                         </div>
                       </div>
 
-                      <div className="bg-gray-50/50 p-3 rounded-lg space-y-2 h-fit">
-                        <div className="flex justify-between text-sm">
-                          <span>Subtotal</span>
-                          <span>{formatCurrency(subtotal)}</span>
+                      <div className="bg-gray-50/80 p-6 rounded-xl space-y-4 h-fit border shadow-sm">
+                        <div className="flex justify-between text-base">
+                          <span className="text-gray-600">Subtotal</span>
+                          <span className="font-medium">{formatCurrency(subtotal)}</span>
                         </div>
                         <div className="flex items-center justify-between gap-4">
-                          <Label className="text-sm font-normal">Descuento (%)</Label>
+                          <Label className="text-base font-normal text-gray-600">Descuento (%)</Label>
                           <Input
                             type="number"
                             value={discount}
                             onChange={(e) => setDiscount(Number(e.target.value))}
-                            className="w-20 h-7 text-right text-sm"
+                            className="w-24 h-9 text-right font-medium"
                           />
                         </div>
                         <div className="flex items-center justify-between gap-4">
-                          <Label className="text-sm font-normal">Costo de Envío ($)</Label>
+                          <Label className="text-base font-normal text-gray-600">Costo de Envío ($)</Label>
                           <Input
                             type="number"
                             value={shippingCost}
                             onChange={(e) => setShippingCost(Number(e.target.value))}
-                            className="w-24 h-7 text-right text-sm"
+                            className="w-28 h-9 text-right font-medium"
                           />
                         </div>
-                        <div className="border-t pt-2 mt-2 flex justify-between items-center">
-                          <span className="font-bold text-base">Total</span>
-                          <span className="font-bold text-lg text-purple-600">{formatCurrency(total)}</span>
+                        <div className="border-t border-gray-200 pt-4 mt-2 flex justify-between items-center">
+                          <span className="font-bold text-xl text-gray-800">Total</span>
+                          <span className="font-bold text-2xl text-purple-700">{formatCurrency(total)}</span>
                         </div>
                         
-                        <div className="pt-2">
-                            <Button onClick={createOrder} className="w-full bg-purple-600 hover:bg-purple-700">
+                        <div className="pt-4">
+                            <Button onClick={createOrder} className="w-full h-11 text-lg font-medium bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-200">
                               {editingOrder ? "Actualizar Pedido" : "Guardar Pedido"}
                             </Button>
                         </div>
