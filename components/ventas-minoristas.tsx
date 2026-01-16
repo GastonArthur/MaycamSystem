@@ -956,27 +956,50 @@ export function VentasMinoristas({ inventory }: VentasMinoristasProps) {
               </div>
               <div className="space-y-2">
                 <Label>Cliente</Label>
-                <Select 
-                  value={newSaleClientId?.toString() || ""} 
-                  onValueChange={(val) => {
-                    const client = clients.find(c => c.id.toString() === val)
-                    if (client) {
-                      setNewSaleClientId(client.id)
-                      setNewSaleClient(client.name)
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar cliente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id.toString()}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select 
+                    value={newSaleClientId?.toString() || ""} 
+                    onValueChange={(val) => {
+                      const client = clients.find(c => c.id.toString() === val)
+                      if (client) {
+                        setNewSaleClientId(client.id)
+                        setNewSaleClient(client.name)
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Seleccionar cliente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.id.toString()}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      setEditingClient(null)
+                      setNewClientData({
+                        name: "",
+                        dni_cuit: "",
+                        email: "",
+                        phone: "",
+                        province: "",
+                        city: "",
+                        zip_code: "",
+                        address: "",
+                      })
+                      setShowClientForm(true)
+                    }}
+                    title="Crear nuevo cliente"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
 
