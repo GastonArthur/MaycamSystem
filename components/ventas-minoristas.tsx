@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronUp,
   Filter,
+  AlertTriangle,
 } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 import { toast } from "@/hooks/use-toast"
@@ -29,6 +30,7 @@ import { logError } from "@/lib/logger"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 type InventoryItem = {
   id: number
@@ -93,6 +95,7 @@ export function VentasMinoristas({ inventory }: VentasMinoristasProps) {
   const [sales, setSales] = useState<RetailSale[]>([])
   const [clients, setClients] = useState<RetailClient[]>([])
   const [showNewSaleForm, setShowNewSaleForm] = useState(false)
+  const [missingTable, setMissingTable] = useState(false)
 
   // New Sale Form State
   const [newSaleDate, setNewSaleDate] = useState(new Date().toISOString().split("T")[0])
@@ -169,8 +172,13 @@ export function VentasMinoristas({ inventory }: VentasMinoristasProps) {
           .order("date", { ascending: false })
 
         if (salesError) {
-          // If table doesn't exist yet, just ignore (first run)
-          if (salesError.code !== "42P01") throw salesError
+          // If table doesn't exist yet, warn the user
+          if (salesError.code === "42P01") {
+            setMissingTable(true)
+            console.warn("Table retail_sales does not exist. Please run the setup script.")
+          } else {
+            throw salesError
+          }
         } else if (salesData) {
            setSales(salesData as RetailSale[])
         }
@@ -648,7 +656,17 @@ export function VentasMinoristas({ inventory }: VentasMinoristasProps) {
           <CardDescription>Gestión completa de ventas minoristas, clientes y seguimiento de pedidos</CardDescription>
         </CardHeader>
       </Card>
-      {/* </CHANGE> */}
+      
+      {missingTable && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Configuración incompleta</AlertTitle>
+          <AlertDescription>
+            Las tablas necesarias para guardar las ventas no existen en la base de datos. 
+            Por favor ejecute el script <strong>scripts/add_retail_sales.sql</strong> en su panel de Supabase.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
         <div className="px-6 border-b">
