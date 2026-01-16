@@ -13,7 +13,8 @@ import { toast } from "@/hooks/use-toast"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { getCurrentUser, logActivity, getSessionToken } from "@/lib/auth"
 import { cn } from "@/lib/utils"
-import { Pencil, Trash2, Search, History, Package, Layers } from "lucide-react"
+import { Pencil, Trash2, Search, History, Package, Layers, Upload } from "lucide-react"
+import { read, utils } from "xlsx"
 
 type StockProduct = {
   id: number
@@ -48,6 +49,7 @@ export function StockManagement() {
     brandMode: "select" as "select" | "new",
     brand: "",
     quantity: "",
+    created_at: new Date().toISOString().split("T")[0],
   })
   const [brands, setBrands] = useState<string[]>([])
   const [products, setProducts] = useState<StockProduct[]>([])
@@ -183,6 +185,69 @@ export function StockManagement() {
     }
   }
 
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    if (readOnly) return
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      setLoading(true)
+      const buffer = await file.arrayBuffer()
+      const wb = read(buffer)
+      const ws = wb.Sheets[wb.SheetNames[0]]
+      const data = utils.sheet_to_json(ws)
+
+      let importedCount = 0
+      let errors = 0
+
+      for (const row of data as any[]) {
+        const sku = String(row.SKU || row.sku || "").toUpperCase().trim()
+        const name = String(row.Nombre || row.name || "").trim()
+        const brand = String(row.Marca || row.brand || "").trim()
+        const qty = Number(row.Cantidad || row.quantity || 0)
+        let date = row.Fecha || row.date || form.created_at
+
+        if (!sku || !name || !brand) {
+          errors++
+          continue
+        }
+
+        // Handle Excel date serial number if necessary
+        if (typeof date === 'number') {
+            // Excel epoch is usually Dec 30 1899
+            const d = new Date(Math.round((date - 25569) * 86400 * 1000));
+            date = d.toISOString();
+        }
+
+        try {
+            await fetchStock({
+                action: "createProduct",
+                payload: { sku, name, brand, quantity: qty, created_at: date },
+            })
+            importedCount++
+        } catch (err) {
+            errors++
+        }
+      }
+
+      toast({
+        title: "Importación completada",
+        description: `Importados: ${importedCount}. Omitidos/Errores: ${errors}`,
+      })
+      fetchData()
+    } catch (err) {
+      console.error(err)
+      toast({
+        title: "Error de importación",
+        description: "No se pudo procesar el archivo",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+      e.target.value = ""
+    }
+  }
+
   async function saveProduct() {
     if (readOnly) return
     const name = sanitizeText(form.name)
@@ -220,7 +285,7 @@ export function StockManagement() {
           name,
           brand: brandValue,
           quantity: qtyNum,
-          created_at: now,
+          created_at: form.created_at ? new Date(form.created_at).toISOString() : now,
           updated_at: now,
           change_count: 1,
         }
@@ -237,19 +302,19 @@ export function StockManagement() {
               old_quantity: 0,
               new_quantity: qtyNum,
               user_email: user?.email || "usuario",
-              created_at: now,
+              created_at: form.created_at ? new Date(form.created_at).toISOString() : now,
             },
           ])
         )
         toast({ title: "Guardado", description: "Producto creado" })
-        setForm({ name: "", sku: "", brandMode: "select", brand: "", quantity: "" })
+        setForm({ name: "", sku: "", brandMode: "select", brand: "", quantity: "", created_at: new Date().toISOString().split("T")[0] })
         return
       }
 
       // Crear producto y asegurar marca vía API con service role
       const resp = await fetchStock({
         action: "createProduct",
-        payload: { sku, name, brand: brandValue, quantity: qtyNum },
+        payload: { sku, name, brand: brandValue, quantity: qtyNum, created_at: form.created_at },
       })
       const json = await resp.json()
       if (!resp.ok || !json?.ok) {
@@ -302,7 +367,7 @@ export function StockManagement() {
           variant: "destructive",
         })
       }
-      setForm({ name: "", sku: "", brandMode: "select", brand: "", quantity: "" })
+      setForm({ name: "", sku: "", brandMode: "select", brand: "", quantity: "", created_at: new Date().toISOString().split("T")[0] })
       setSearch("")
       setBrandFilter("all")
       fetchData()
@@ -449,7 +514,7 @@ export function StockManagement() {
           <CardDescription>Base de datos independiente</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-5 gap-4">
+          <div className="grid md:grid-cols-6 gap-4">
             <div className="md:col-span-2">
               <Label>Nombre</Label>
               <Input
@@ -528,11 +593,33 @@ export function StockManagement() {
                 placeholder="0"
               />
             </div>
+            <div>
+              <Label>Fecha</Label>
+              <Input
+                type="date"
+                value={form.created_at}
+                onChange={(e) => setForm((f) => ({ ...f, created_at: e.target.value }))}
+                disabled={readOnly}
+              />
+            </div>
           </div>
           <div className="mt-4 flex items-center gap-3">
             <Button onClick={saveProduct} disabled={saving || readOnly} className="bg-emerald-600 hover:bg-emerald-700">
               Guardar
             </Button>
+            <div className="relative">
+              <input
+                type="file"
+                accept=".xlsx, .xls, .csv"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                onChange={handleFileUpload}
+                disabled={loading || readOnly}
+              />
+              <Button variant="outline" disabled={loading || readOnly} className="flex items-center gap-2">
+                <Upload className="w-4 h-4" />
+                Importar Excel
+              </Button>
+            </div>
             {lastCreatedSku && (
               <Badge variant={persistStatus === "ok" ? "default" : "destructive"}>
                 {persistStatus === "ok" ? "Persistencia BD: OK" : "Persistencia BD: ERROR"}

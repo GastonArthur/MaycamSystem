@@ -93,11 +93,19 @@ type WholesaleOrder = {
   status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled"
   is_paid: boolean
   total_amount: number
+  subtotal?: number
+  discount_percentage?: number
+  shipping_cost?: number
   items: WholesaleOrderItem[]
   notes: string
   vendor?: string
   created_at: string
   client?: WholesaleClient
+  stock_status?: "restado" | "pendiente"
+  payment_status?: "pagado" | "pendiente" | "no_pagado"
+  delivery_status?: "entregado" | "pendiente" | "no_entregado"
+  tracking_number?: string
+  bultos?: number
 }
 
 type WholesaleOrderItem = {
@@ -198,6 +206,16 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
   const [orderNotes, setOrderNotes] = useState("")
   const [orderVendor, setOrderVendor] = useState("")
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split("T")[0])
+  
+  // New State for replicated Retail dynamics
+  const [discount, setDiscount] = useState(0)
+  const [shippingCost, setShippingCost] = useState(0)
+  const [stockStatus, setStockStatus] = useState("restado")
+  const [paymentStatus, setPaymentStatus] = useState("no_pagado")
+  const [deliveryStatus, setDeliveryStatus] = useState("no_entregado")
+  const [trackingNumber, setTrackingNumber] = useState("")
+  const [bultos, setBultos] = useState(0)
+
   const [editingOrder, setEditingOrder] = useState<WholesaleOrder | null>(null)
   const [viewingClient, setViewingClient] = useState<WholesaleClient | null>(null)
   const [expandedOrders, setExpandedOrders] = useState<number[]>([])
@@ -996,21 +1014,30 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
     setCurrentQuantity(1)
   }
 
-  // Auto-fill details when SKU exists in inventory
-  useEffect(() => {
-    if (!currentSku) return
-
-    const item = inventory.find((i) => i.sku === currentSku)
-    if (item) {
-      setCurrentDescription(item.description)
-      // Default to price list 1
-      setCurrentUnitPrice(item.cost_without_tax * (1 + wholesaleConfig.percentage_1 / 100))
-    }
-  }, [currentSku, inventory, wholesaleConfig])
+  // Auto-fill details removed
+  // useEffect(() => {
+  //   if (!currentSku) return
+  //
+  //   const item = inventory.find((i) => i.sku === currentSku)
+  //   if (item) {
+  //     setCurrentDescription(item.description)
+  //     // Default to price list 1
+  //     setCurrentUnitPrice(item.cost_without_tax * (1 + wholesaleConfig.percentage_1 / 100))
+  //   }
+  // }, [currentSku, inventory, wholesaleConfig])
 
   const removeItemFromOrder = (id: number) => {
     setOrderItems((prev) => prev.filter((item) => item.id !== id))
   }
+
+  const calculateTotals = () => {
+    const subtotal = orderItems.reduce((sum, item) => sum + item.total_price, 0)
+    const discountAmount = subtotal * (discount / 100)
+    const total = subtotal - discountAmount + shippingCost
+    return { subtotal, total }
+  }
+
+  const { subtotal, total } = calculateTotals()
 
   const createOrder = async (e?: React.MouseEvent) => {
     if (e) e.preventDefault()
@@ -1033,7 +1060,6 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
       return
     }
 
-    const totalAmount = orderItems.reduce((sum, item) => sum + item.total_price, 0)
     const clientId = Number.parseInt(selectedClient)
 
     try {
@@ -1041,17 +1067,30 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
         const user = getCurrentUser()
         const userId = user?.id || null
 
+        const orderData = {
+          client_id: clientId,
+          order_date: orderDate,
+          total_amount: total,
+          subtotal: subtotal,
+          discount_percentage: discount,
+          shipping_cost: shippingCost,
+          notes: orderNotes,
+          vendor: orderVendor || null,
+          stock_status: stockStatus,
+          payment_status: paymentStatus,
+          delivery_status: deliveryStatus,
+          tracking_number: trackingNumber,
+          bultos: bultos,
+          // Maintain backward compatibility
+          is_paid: paymentStatus === "pagado", 
+          status: deliveryStatus === "entregado" ? "delivered" : "pending", 
+        }
+
         if (editingOrder) {
           // Update order
           const { error: orderError } = await supabase
             .from("wholesale_orders")
-            .update({
-              client_id: clientId,
-              total_amount: totalAmount,
-              notes: orderNotes,
-              order_date: orderDate,
-              vendor: orderVendor || null,
-            })
+            .update(orderData)
             .eq("id", editingOrder.id)
 
           if (orderError) throw orderError
@@ -1084,17 +1123,13 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
           })
         } else {
           // Create order
-          const { data: orderData, error: orderError } = await supabase
+          const { data: orderDataResponse, error: orderError } = await supabase
             .from("wholesale_orders")
             .insert([
               {
-                client_id: clientId,
-                order_date: orderDate,
+                ...orderData,
                 status: "pending",
-                total_amount: totalAmount,
-                notes: orderNotes,
                 created_by: userId,
-                vendor: orderVendor || null,
               },
             ])
             .select()
@@ -1103,7 +1138,7 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
           if (orderError) throw orderError
 
           const itemsToInsert = orderItems.map((item) => ({
-            order_id: orderData.id,
+            order_id: orderDataResponse.id,
             sku: item.sku,
             description: item.description,
             quantity: item.quantity,
@@ -1129,11 +1164,19 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
           const updatedOrder: WholesaleOrder = {
             ...editingOrder,
             client_id: clientId,
-            total_amount: totalAmount,
+            total_amount: total,
+            subtotal,
+            discount_percentage: discount,
+            shipping_cost: shippingCost,
             items: orderItems,
             notes: orderNotes,
             vendor: orderVendor || undefined,
             order_date: orderDate,
+            stock_status: stockStatus as any,
+            payment_status: paymentStatus as any,
+            delivery_status: deliveryStatus as any,
+            tracking_number: trackingNumber,
+            bultos: bultos,
           }
           setOrders((prev) => prev.map((o) => (o.id === editingOrder.id ? updatedOrder : o)))
           toast({
@@ -1146,12 +1189,20 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
             client_id: clientId,
             order_date: orderDate,
             status: "pending",
-            is_paid: false,
-            total_amount: totalAmount,
+            is_paid: paymentStatus === "pagado",
+            total_amount: total,
+            subtotal,
+            discount_percentage: discount,
+            shipping_cost: shippingCost,
             items: orderItems,
             notes: orderNotes,
             vendor: orderVendor || undefined,
             created_at: new Date().toISOString(),
+            stock_status: stockStatus as any,
+            payment_status: paymentStatus as any,
+            delivery_status: deliveryStatus as any,
+            tracking_number: trackingNumber,
+            bultos: bultos,
           }
           setOrders((prev) => [newOrder, ...prev])
           toast({
@@ -1169,6 +1220,17 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
       setOrderVendor("")
       setOrderDate(new Date().toISOString().split("T")[0])
       setEditingOrder(null)
+      setDiscount(0)
+      setShippingCost(0)
+      setStockStatus("restado")
+      setPaymentStatus("no_pagado")
+      setDeliveryStatus("no_entregado")
+      setTrackingNumber("")
+      setBultos(0)
+      setCurrentSku("")
+      setCurrentDescription("")
+      setCurrentQuantity(1)
+      setCurrentUnitPrice(0)
     } catch (error) {
       logError("Error saving order:", error)
       toast({
@@ -1256,6 +1318,16 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
     setOrderVendor(order.vendor || "")
     setOrderDate(order.order_date.split("T")[0])
     setOrderItems(order.items || [])
+
+    // Set new fields
+    setDiscount(order.discount_percentage || 0)
+    setShippingCost(order.shipping_cost || 0)
+    setStockStatus(order.stock_status || "restado")
+    setPaymentStatus(order.payment_status || (order.is_paid ? "pagado" : "no_pagado"))
+    setDeliveryStatus(order.delivery_status || (order.status === "delivered" ? "entregado" : "no_entregado"))
+    setTrackingNumber(order.tracking_number || "")
+    setBultos(order.bultos || 0)
+
     setShowOrderForm(true)
   }
 
@@ -2733,22 +2805,37 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                     setOrderNotes("")
                     setOrderVendor("")
                     setOrderDate(new Date().toISOString().split("T")[0])
+                    setDiscount(0)
+                    setShippingCost(0)
+                    setStockStatus("restado")
+                    setPaymentStatus("no_pagado")
+                    setDeliveryStatus("no_entregado")
+                    setTrackingNumber("")
+                    setBultos(0)
+                    setCurrentSku("")
+                    setCurrentDescription("")
+                    setCurrentQuantity(1)
+                    setCurrentUnitPrice(0)
                   }
                 }}
               >
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>{editingOrder ? "Editar Pedido Mayorista" : "Nuevo Pedido Mayorista"}</DialogTitle>
-                    <DialogDescription>Complete los datos y confirme para guardar el pedido.</DialogDescription>
+                <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
+                  <DialogHeader className="px-6 py-4 border-b bg-gray-50/50">
+                    <DialogTitle>{editingOrder ? "Editar Pedido" : "Nueva Venta"}</DialogTitle>
+                    <DialogDescription>Complete los detalles de la venta.</DialogDescription>
                   </DialogHeader>
 
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div>
-                        <Label>Cliente</Label>
+                  <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    <div className="grid grid-cols-2 gap-8">
+                      <div className="space-y-2">
+                        <Label className="text-base font-semibold text-gray-700">Fecha de Emisión</Label>
+                        <Input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className="h-10" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-base font-semibold text-gray-700">Cliente</Label>
                         <div className="flex gap-2">
                           <Select value={selectedClient} onValueChange={setSelectedClient}>
-                            <SelectTrigger className="flex-1">
+                            <SelectTrigger className="flex-1 h-10">
                               <SelectValue placeholder="Seleccionar cliente" />
                             </SelectTrigger>
                             <SelectContent>
@@ -2762,6 +2849,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                           <Button
                             variant="outline"
                             size="icon"
+                            className="h-10 w-10"
                             onClick={() => setShowClientForm(true)}
                             title="Nuevo Cliente"
                           >
@@ -2769,176 +2857,208 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                           </Button>
                         </div>
                       </div>
+                    </div>
 
-                      <div>
-                        <Label>Fecha del Pedido</Label>
-                        <Input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} />
-                      </div>
-
-                      <div>
-                        <Label>Vendedor</Label>
-                        <div className="flex gap-2">
-                          <Select value={orderVendor} onValueChange={setOrderVendor}>
-                            <SelectTrigger className="flex-1">
-                              <SelectValue placeholder="Seleccionar vendedor" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {vendors.map((v) => (
-                                <SelectItem key={v.id} value={v.name}>
-                                  {v.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setActiveTab("vendedores")}
-                            title="Nuevo Vendedor"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </Button>
+                    <div className="border rounded-xl p-5 bg-gray-50/30 space-y-4 shadow-sm">
+                      <h4 className="font-semibold text-base flex items-center gap-2 text-purple-700">
+                        <div className="p-1 bg-purple-100 rounded-md">
+                            <Plus className="w-4 h-4" /> 
                         </div>
-                      </div>
-
-                      <div className="border p-4 rounded-md bg-gray-50">
-                        <h4 className="font-medium mb-2">Agregar Producto</h4>
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label>SKU</Label>
-                              <Input
-                                value={currentSku}
-                                onChange={(e) => {
-                                  const val = e.target.value
-                                  setCurrentSku(val)
-                                  const item = inventory.find((i) => i.sku.toLowerCase() === val.toLowerCase())
-                                  if (item) {
-                                    setCurrentDescription(item.description)
-                                    setCurrentUnitPrice(
-                                      item.cost_without_tax * (1 + wholesaleConfig.percentage_1 / 100),
-                                    )
-                                  }
-                                }}
-                                placeholder="SKU"
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") addItemToOrder()
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <Label>Cantidad</Label>
-                              <Input
-                                type="number"
-                                min="1"
-                                value={currentQuantity}
-                                onChange={(e) => setCurrentQuantity(Number.parseInt(e.target.value) || 1)}
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <Label>Nombre</Label>
-                            <Input
-                              value={currentDescription}
-                              onChange={(e) => setCurrentDescription(e.target.value)}
-                              placeholder="Nombre del producto"
-                            />
-                          </div>
-
-                          <div>
-                            <Label>Precio Unitario</Label>
-                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={currentUnitPrice}
-                                onChange={(e) => setCurrentUnitPrice(Number.parseFloat(e.target.value) || 0)}
-                                className="pl-7"
-                              />
-                            </div>
-                          </div>
-
+                        Agregar Producto
+                      </h4>
+                      <div className="grid grid-cols-12 gap-4 items-end">
+                        <div className="col-span-2 space-y-1.5">
+                          <Label className="text-sm font-medium">SKU</Label>
+                          <Input
+                            value={currentSku}
+                            onChange={(e) => {
+                                const val = e.target.value
+                                setCurrentSku(val)
+                            }}
+                            placeholder="Buscar SKU..."
+                            className="h-10"
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") addItemToOrder()
+                            }}
+                          />
+                        </div>
+                        <div className="col-span-5 space-y-1.5">
+                          <Label className="text-sm font-medium">Descripción</Label>
+                          <Input
+                            value={currentDescription}
+                            onChange={(e) => setCurrentDescription(e.target.value)}
+                            placeholder="Descripción del producto"
+                            className="h-10"
+                          />
+                        </div>
+                        <div className="col-span-2 space-y-1.5">
+                          <Label className="text-sm font-medium">Cantidad</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={currentQuantity}
+                            onChange={(e) => setCurrentQuantity(Number(e.target.value))}
+                            className="h-10"
+                          />
+                        </div>
+                        <div className="col-span-2 space-y-1.5">
+                          <Label className="text-sm font-medium">Precio Unit.</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={currentUnitPrice}
+                            onChange={(e) => setCurrentUnitPrice(Number(e.target.value))}
+                            className="h-10"
+                          />
+                        </div>
+                        <div className="col-span-1">
                           <Button
-                            type="button"
                             onClick={addItemToOrder}
-                            className="w-full bg-purple-600 hover:bg-purple-700"
+                            className="w-full h-10 bg-purple-600 hover:bg-purple-700 shadow-md"
                           >
-                            <Plus className="w-4 h-4 mr-2" /> Agregar al Pedido
+                            <Plus className="w-5 h-5" />
                           </Button>
                         </div>
-                      </div>
-
-                      <div>
-                        <Label>Notas</Label>
-                        <Textarea
-                          value={orderNotes}
-                          onChange={(e) => setOrderNotes(e.target.value)}
-                          placeholder="Observaciones sobre el pedido..."
-                        />
                       </div>
                     </div>
 
-                    <div className="space-y-4">
-                      <h4 className="font-medium">Items del Pedido</h4>
-                      <ScrollArea className="h-[300px] border rounded-md p-2">
-                        <Table>
-                          <TableHeader>
+                    <div className="border rounded-xl overflow-hidden shadow-sm bg-white min-h-[250px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-100/80 hover:bg-gray-100/80">
+                            <TableHead className="h-10 font-bold text-gray-700">SKU</TableHead>
+                            <TableHead className="h-10 font-bold text-gray-700">Descripción</TableHead>
+                            <TableHead className="h-10 font-bold text-gray-700 text-right">Cant.</TableHead>
+                            <TableHead className="h-10 font-bold text-gray-700 text-right">Precio</TableHead>
+                            <TableHead className="h-10 font-bold text-gray-700 text-right">Total</TableHead>
+                            <TableHead className="h-10 w-[50px]"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {orderItems.length === 0 ? (
                             <TableRow>
-                              <TableHead>SKU</TableHead>
-                              <TableHead>Cant.</TableHead>
-                              <TableHead>Total</TableHead>
-                              <TableHead></TableHead>
+                              <TableCell colSpan={6} className="text-center py-12 text-gray-400 text-base">
+                                <div className="flex flex-col items-center gap-2">
+                                    <ShoppingCart className="w-10 h-10 opacity-20" />
+                                    No hay productos agregados
+                                </div>
+                              </TableCell>
                             </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {orderItems.map((item) => (
-                              <TableRow key={item.id}>
-                                <TableCell className="font-medium">{item.sku}</TableCell>
-                                <TableCell>{item.quantity}</TableCell>
-                                <TableCell>{formatCurrency(item.total_price)}</TableCell>
-                                <TableCell>
-                                  <Button variant="ghost" size="sm" onClick={() => removeItemFromOrder(item.id)}>
-                                    <Trash2 className="w-3 h-3 text-red-500" />
+                          ) : (
+                            orderItems.map((item, index) => (
+                              <TableRow key={index} className="hover:bg-gray-50/50 transition-colors">
+                                <TableCell className="py-3 font-medium text-gray-700">{item.sku}</TableCell>
+                                <TableCell className="py-3 text-gray-600">{item.description}</TableCell>
+                                <TableCell className="py-3 text-right">{item.quantity}</TableCell>
+                                <TableCell className="py-3 text-right">
+                                  {formatCurrency(item.unit_price)}
+                                </TableCell>
+                                <TableCell className="py-3 text-right font-bold text-gray-800">
+                                  {formatCurrency(item.total_price)}
+                                </TableCell>
+                                <TableCell className="py-3">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 rounded-full"
+                                    onClick={() => removeItemFromOrder(item.id)}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
                                   </Button>
                                 </TableCell>
                               </TableRow>
-                            ))}
-                            {orderItems.length === 0 && (
-                              <TableRow>
-                                <TableCell colSpan={4} className="text-center text-gray-500 py-8">
-                                  Agregue productos al pedido
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </ScrollArea>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
 
-                      <div className="flex justify-between items-center text-lg font-bold p-4 bg-purple-50 rounded-md">
-                        <span>Total:</span>
-                        <span>${orderItems.reduce((sum, item) => sum + item.total_price, 0).toFixed(2)}</span>
+                    <div className="grid grid-cols-2 gap-8">
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Estado Stock</Label>
+                            <Select value={stockStatus} onValueChange={setStockStatus}>
+                              <SelectTrigger className="h-10">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="restado">Stock Restado</SelectItem>
+                                <SelectItem value="pendiente">Pendiente</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium">Estado Pago</Label>
+                            <Select value={paymentStatus} onValueChange={setPaymentStatus}>
+                              <SelectTrigger className="h-10">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pagado">Pagado</SelectItem>
+                                <SelectItem value="pendiente">Pendiente</SelectItem>
+                                <SelectItem value="no_pagado">No Pagado</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Estado Entrega</Label>
+                          <Select value={deliveryStatus} onValueChange={setDeliveryStatus}>
+                            <SelectTrigger className="h-10">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="entregado">Entregado</SelectItem>
+                              <SelectItem value="pendiente">Pendiente</SelectItem>
+                              <SelectItem value="no_entregado">No Entregado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Notas</Label>
+                          <Textarea
+                            value={orderNotes}
+                            onChange={(e) => setOrderNotes(e.target.value)}
+                            placeholder="Notas adicionales..."
+                            className="resize-none h-24 text-sm bg-gray-50/30"
+                          />
+                        </div>
                       </div>
 
-                      <div className="flex gap-2 justify-end">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            setShowOrderForm(false)
-                            setEditingOrder(null)
-                            setOrderItems([])
-                            setSelectedClient("")
-                            setOrderNotes("")
-                          }}
-                        >
-                          Cancelar
-                        </Button>
-                        <Button type="button" onClick={createOrder} className="bg-purple-600 hover:bg-purple-700">
-                          {editingOrder ? "Actualizar Pedido" : "Confirmar Pedido"}
-                        </Button>
+                      <div className="bg-gray-50/80 p-6 rounded-xl space-y-4 h-fit border shadow-sm">
+                        <div className="flex justify-between text-base">
+                          <span className="text-gray-600">Subtotal</span>
+                          <span className="font-medium">{formatCurrency(subtotal)}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <Label className="text-base font-normal text-gray-600">Descuento (%)</Label>
+                          <Input
+                            type="number"
+                            value={discount}
+                            onChange={(e) => setDiscount(Number(e.target.value))}
+                            className="w-24 h-9 text-right font-medium"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <Label className="text-base font-normal text-gray-600">Costo de Envío ($)</Label>
+                          <Input
+                            type="number"
+                            value={shippingCost}
+                            onChange={(e) => setShippingCost(Number(e.target.value))}
+                            className="w-28 h-9 text-right font-medium"
+                          />
+                        </div>
+                        <div className="border-t border-gray-200 pt-4 mt-2 flex justify-between items-center">
+                          <span className="font-bold text-xl text-gray-800">Total</span>
+                          <span className="font-bold text-2xl text-purple-700">{formatCurrency(total)}</span>
+                        </div>
+                        
+                        <div className="pt-4">
+                            <Button onClick={createOrder} className="w-full h-11 text-lg font-medium bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-200">
+                              {editingOrder ? "Actualizar Pedido" : "Guardar Pedido"}
+                            </Button>
+                        </div>
                       </div>
                     </div>
                   </div>

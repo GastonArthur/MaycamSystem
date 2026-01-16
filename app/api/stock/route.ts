@@ -79,23 +79,36 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "createProduct") {
-      const { sku, name, brand, quantity } = body?.payload || {}
+      const { sku, name, brand, quantity, created_at } = body?.payload || {}
       const skuV = String(sku || "").toUpperCase().trim()
       const nameV = String(name || "").trim()
       const brandV = String(brand || "").trim()
       const qtyV = Number(quantity)
+      const dt = created_at ? String(created_at) : null
+
       if (!skuV || !nameV || !brandV || !Number.isFinite(qtyV) || qtyV < 0) {
         return NextResponse.json({ error: "Datos inválidos" }, { status: 400 })
       }
+      if (dt) {
+        const parsed = new Date(dt)
+        if (isNaN(parsed.getTime())) {
+          return NextResponse.json({ error: "Fecha inválida" }, { status: 400 })
+        }
+      }
+
       // Ensure brand
       const { data: existingBrand } = await supabase.from("stock_brands").select("name").eq("name", brandV).maybeSingle()
       if (!existingBrand) {
         const { error: bErr } = await supabase.from("stock_brands").insert({ name: brandV })
         if (bErr) return NextResponse.json({ error: bErr.message }, { status: 400 })
       }
+      
+      const insertData: any = { sku: skuV, name: nameV, brand: brandV, quantity: qtyV }
+      if (dt) insertData.created_at = dt
+
       const { data: inserted, error: insErr } = await supabase
         .from("stock_products")
-        .insert([{ sku: skuV, name: nameV, brand: brandV, quantity: qtyV }])
+        .insert([insertData])
         .select("id")
         .single()
       if (insErr || !inserted) {
