@@ -84,6 +84,12 @@ type WholesaleClient = {
   email: string
   whatsapp: string
   created_at: string
+  extra_contact?: string
+  zip_code?: string
+  transport?: string
+  destination?: string
+  guide_number?: string
+  shipping_price?: number
 }
 
 type WholesaleOrder = {
@@ -101,7 +107,6 @@ type WholesaleOrder = {
   vendor?: string
   created_at: string
   client?: WholesaleClient
-  stock_status?: "restado" | "pendiente"
   payment_status?: "pagado" | "pendiente" | "no_pagado"
   delivery_status?: "entregado" | "pendiente" | "no_entregado"
   tracking_number?: string
@@ -116,6 +121,8 @@ type WholesaleOrderItem = {
   quantity: number
   unit_price: number
   total_price: number
+  stock_status?: "STOCK RESTADO" | "NO HAY STOCK" | "ENTREGA BULLPADEL" | "PEDIR A BULLPADEL"
+  observations?: string
 }
 
 interface MayoristasManagementProps {
@@ -192,6 +199,12 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
     contact_person: "",
     email: "",
     whatsapp: "",
+    extra_contact: "",
+    zip_code: "",
+    transport: "",
+    destination: "",
+    guide_number: "",
+    shipping_price: 0,
   })
 
   // Estados para pedidos
@@ -203,6 +216,10 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
   const [currentDescription, setCurrentDescription] = useState("")
   const [currentUnitPrice, setCurrentUnitPrice] = useState(0)
   const [currentQuantity, setCurrentQuantity] = useState(1)
+  const [currentStockStatus, setCurrentStockStatus] = useState<
+    "STOCK RESTADO" | "NO HAY STOCK" | "ENTREGA BULLPADEL" | "PEDIR A BULLPADEL"
+  >("STOCK RESTADO")
+  const [currentObservations, setCurrentObservations] = useState("")
   const [orderNotes, setOrderNotes] = useState("")
   const [orderVendor, setOrderVendor] = useState("")
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split("T")[0])
@@ -756,6 +773,12 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
             contact_person: updatedClient.contact_person,
             email: updatedClient.email,
             whatsapp: updatedClient.whatsapp,
+            extra_contact: updatedClient.extra_contact,
+            zip_code: updatedClient.zip_code,
+            transport: updatedClient.transport,
+            destination: updatedClient.destination,
+            guide_number: updatedClient.guide_number,
+            shipping_price: updatedClient.shipping_price,
           })
           .eq("id", updatedClient.id)
 
@@ -782,6 +805,12 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
       contact_person: "",
       email: "",
       whatsapp: "",
+      extra_contact: "",
+      zip_code: "",
+      transport: "",
+      destination: "",
+      guide_number: "",
+      shipping_price: 0,
     })
     setEditingClient(null)
     setShowClientForm(false)
@@ -908,6 +937,12 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
               whatsapp: newClient.whatsapp,
               created_by: userId,
               section: "bullpadel",
+              extra_contact: newClient.extra_contact,
+              zip_code: newClient.zip_code,
+              transport: newClient.transport,
+              destination: newClient.destination,
+              guide_number: newClient.guide_number,
+              shipping_price: newClient.shipping_price,
             },
           ])
           .select()
@@ -1005,6 +1040,8 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
       quantity: currentQuantity,
       unit_price: currentUnitPrice,
       total_price: currentUnitPrice * currentQuantity,
+      stock_status: currentStockStatus,
+      observations: currentObservations,
     }
 
     setOrderItems((prev) => [...prev, newItem])
@@ -1012,6 +1049,8 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
     setCurrentDescription("")
     setCurrentUnitPrice(0)
     setCurrentQuantity(1)
+    setCurrentStockStatus("STOCK RESTADO")
+    setCurrentObservations("")
   }
 
   // Auto-fill details removed
@@ -1076,7 +1115,6 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
           shipping_cost: shippingCost,
           notes: orderNotes,
           vendor: orderVendor || null,
-          stock_status: stockStatus,
           payment_status: paymentStatus,
           delivery_status: deliveryStatus,
           tracking_number: trackingNumber,
@@ -1111,6 +1149,8 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
             quantity: item.quantity,
             unit_price: item.unit_price,
             total_price: item.total_price,
+            stock_status: item.stock_status,
+            observations: item.observations,
           }))
 
           const { error: itemsError } = await supabase.from("wholesale_order_items").insert(itemsToInsert)
@@ -1144,6 +1184,8 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
             quantity: item.quantity,
             unit_price: item.unit_price,
             total_price: item.total_price,
+            stock_status: item.stock_status,
+            observations: item.observations,
           }))
 
           const { error: itemsError } = await supabase.from("wholesale_order_items").insert(itemsToInsert)
@@ -1322,7 +1364,6 @@ export function MayoristasBullpadelManagement({ inventory, suppliers, brands }: 
     // Set new fields
     setDiscount(order.discount_percentage || 0)
     setShippingCost(order.shipping_cost || 0)
-    setStockStatus(order.stock_status || "restado")
     setPaymentStatus(order.payment_status || (order.is_paid ? "pagado" : "no_pagado"))
     setDeliveryStatus(order.delivery_status || (order.status === "delivered" ? "entregado" : "no_entregado"))
     setTrackingNumber(order.tracking_number || "")
@@ -2882,7 +2923,7 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                             }}
                           />
                         </div>
-                        <div className="col-span-5 space-y-1.5">
+                        <div className="col-span-4 space-y-1.5">
                           <Label className="text-sm font-medium">Descripción</Label>
                           <Input
                             value={currentDescription}
@@ -2891,8 +2932,22 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                             className="h-10"
                           />
                         </div>
-                        <div className="col-span-2 space-y-1.5">
-                          <Label className="text-sm font-medium">Cantidad</Label>
+                        <div className="col-span-3 space-y-1.5">
+                          <Label className="text-sm font-medium">Estado Stock</Label>
+                           <Select value={currentStockStatus} onValueChange={(val: any) => setCurrentStockStatus(val)}>
+                            <SelectTrigger className="h-10">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="STOCK RESTADO">STOCK RESTADO</SelectItem>
+                              <SelectItem value="NO HAY STOCK">NO HAY STOCK</SelectItem>
+                              <SelectItem value="ENTREGA BULLPADEL">ENTREGA BULLPADEL</SelectItem>
+                              <SelectItem value="PEDIR A BULLPADEL">PEDIR A BULLPADEL</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-1 space-y-1.5">
+                          <Label className="text-sm font-medium">Cant.</Label>
                           <Input
                             type="number"
                             min="1"
@@ -2909,6 +2964,21 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                             value={currentUnitPrice}
                             onChange={(e) => setCurrentUnitPrice(Number(e.target.value))}
                             className="h-10"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-12 gap-4 items-end mt-4">
+                        <div className="col-span-11 space-y-1.5">
+                          <Label className="text-sm font-medium">Observaciones Item</Label>
+                          <Input
+                            value={currentObservations}
+                            onChange={(e) => setCurrentObservations(e.target.value)}
+                            placeholder="Observaciones para este item..."
+                            className="h-10"
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") addItemToOrder()
+                            }}
                           />
                         </div>
                         <div className="col-span-1">
@@ -2976,18 +3046,6 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                     <div className="grid grid-cols-2 gap-8">
                       <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label className="text-sm font-medium">Estado Stock</Label>
-                            <Select value={stockStatus} onValueChange={setStockStatus}>
-                              <SelectTrigger className="h-10">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="restado">Stock Restado</SelectItem>
-                                <SelectItem value="pendiente">Pendiente</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
                           <div className="space-y-2">
                             <Label className="text-sm font-medium">Estado Pago</Label>
                             <Select value={paymentStatus} onValueChange={setPaymentStatus}>
@@ -3714,76 +3772,134 @@ Este reporte contiene información confidencial y está destinado únicamente pa
         {/* Modal para agregar cliente */}
         {showClientForm && (
           <Dialog open={showClientForm} onOpenChange={closeClientForm}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingClient ? "Editar Cliente Mayorista" : "Nuevo Cliente Mayorista"}</DialogTitle>
               </DialogHeader>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Nombre *</Label>
-                  <Input
-                    value={newClient.name}
-                    onChange={(e) => setNewClient((prev) => ({ ...prev, name: e.target.value }))}
-                  />
+              
+              <div className="space-y-6 py-4">
+                {/* Section 1: General Information */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg border-b pb-2">Información General</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Nombre *</Label>
+                      <Input
+                        value={newClient.name}
+                        onChange={(e) => setNewClient((prev) => ({ ...prev, name: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>CUIT / CUIL *</Label>
+                      <Input
+                        value={newClient.cuit}
+                        onChange={(e) => setNewClient((prev) => ({ ...prev, cuit: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Razón Social *</Label>
+                      <Input
+                        value={newClient.business_name}
+                        onChange={(e) => setNewClient((prev) => ({ ...prev, business_name: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Teléfono / WhatsApp</Label>
+                      <Input
+                        value={newClient.whatsapp}
+                        onChange={(e) => setNewClient((prev) => ({ ...prev, whatsapp: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Email</Label>
+                      <Input
+                        type="email"
+                        value={newClient.email}
+                        onChange={(e) => setNewClient((prev) => ({ ...prev, email: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Contacto Extra</Label>
+                      <Input
+                        value={newClient.extra_contact || ""}
+                        onChange={(e) => setNewClient((prev) => ({ ...prev, extra_contact: e.target.value }))}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label>Razón Social *</Label>
-                  <Input
-                    value={newClient.business_name}
-                    onChange={(e) => setNewClient((prev) => ({ ...prev, business_name: e.target.value }))}
-                  />
+
+                {/* Section 2: Address */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg border-b pb-2">Domicilio</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Provincia</Label>
+                      <Input
+                        value={newClient.province}
+                        onChange={(e) => setNewClient((prev) => ({ ...prev, province: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Localidad</Label>
+                      <Input
+                        value={newClient.city || ""}
+                        onChange={(e) => setNewClient((prev) => ({ ...prev, city: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Calle y Número</Label>
+                      <Input
+                        value={newClient.address}
+                        onChange={(e) => setNewClient((prev) => ({ ...prev, address: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Código Postal</Label>
+                      <Input
+                        value={newClient.zip_code || ""}
+                        onChange={(e) => setNewClient((prev) => ({ ...prev, zip_code: e.target.value }))}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label>CUIT *</Label>
-                  <Input
-                    value={newClient.cuit}
-                    onChange={(e) => setNewClient((prev) => ({ ...prev, cuit: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label>Provincia</Label>
-                  <Input
-                    value={newClient.province}
-                    onChange={(e) => setNewClient((prev) => ({ ...prev, province: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label>Dirección</Label>
-                  <Input
-                    value={newClient.address}
-                    onChange={(e) => setNewClient((prev) => ({ ...prev, address: e.target.value }))}
-                  />
-                </div>
-                {/* <div>
-                  <Label>Ciudad</Label>
-                  <Input
-                    value={newClient.city || ""}
-                    onChange={(e) => setNewClient((prev) => ({ ...prev, city: e.target.value }))}
-                  />
-                </div> */}
-                <div>
-                  <Label>Persona de Contacto</Label>
-                  <Input
-                    value={newClient.contact_person}
-                    onChange={(e) => setNewClient((prev) => ({ ...prev, contact_person: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label>Email</Label>
-                  <Input
-                    type="email"
-                    value={newClient.email}
-                    onChange={(e) => setNewClient((prev) => ({ ...prev, email: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label>WhatsApp</Label>
-                  <Input
-                    value={newClient.whatsapp}
-                    onChange={(e) => setNewClient((prev) => ({ ...prev, whatsapp: e.target.value }))}
-                  />
+
+                {/* Section 3: Shipping */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg border-b pb-2">Datos de Envío</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Transporte</Label>
+                      <Input
+                        value={newClient.transport || ""}
+                        onChange={(e) => setNewClient((prev) => ({ ...prev, transport: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Destino</Label>
+                      <Input
+                        value={newClient.destination || ""}
+                        onChange={(e) => setNewClient((prev) => ({ ...prev, destination: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Número de Guía</Label>
+                      <Input
+                        value={newClient.guide_number || ""}
+                        onChange={(e) => setNewClient((prev) => ({ ...prev, guide_number: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Precio del Envío</Label>
+                      <Input
+                        type="number"
+                        value={newClient.shipping_price || 0}
+                        onChange={(e) => setNewClient((prev) => ({ ...prev, shipping_price: Number(e.target.value) }))}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
+
               <div className="flex justify-end gap-2 mt-4">
                 <Button variant="secondary" onClick={closeClientForm}>
                   Cancelar
