@@ -3609,12 +3609,27 @@ Este reporte contiene información confidencial y está destinado únicamente pa
                   </DialogHeader>
 
                   <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                    <div className="grid grid-cols-2 gap-8">
-                      <div className="space-y-2">
+                    <div className="grid grid-cols-12 gap-6">
+                      <div className="col-span-3 space-y-2">
                         <Label className="text-base font-semibold text-gray-700">Fecha de Emisión</Label>
                         <Input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className="h-10" />
                       </div>
-                      <div className="space-y-2">
+                      <div className="col-span-3 space-y-2">
+                        <Label className="text-base font-semibold text-gray-700">Vendedor</Label>
+                        <Select value={orderVendor} onValueChange={setOrderVendor}>
+                          <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Seleccionar" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {vendors.map((vendor) => (
+                              <SelectItem key={vendor.id} value={vendor.name}>
+                                {vendor.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-6 space-y-2">
                         <Label className="text-base font-semibold text-gray-700">Cliente</Label>
                         <div className="flex gap-2">
                           <Select value={selectedClient} onValueChange={setSelectedClient}>
